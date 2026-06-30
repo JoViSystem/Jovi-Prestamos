@@ -3,16 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
   <title>Sistema Avanzado de Prestamos</title>
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <aside class="sidebar" aria-label="Menu principal">
+  <section class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="brand login-brand">
+        <div class="brand-mark">$</div>
+        <div>
+          <strong>Prestamos Pro</strong>
+          <span>Acceso seguro local</span>
+        </div>
+      </div>
+      <form id="loginForm">
+        <label>Usuario<input id="loginUser" autocomplete="username" required></label>
+        <label>Clave<input id="loginPass" type="password" autocomplete="current-password" required></label>
+        <button class="primary-btn full" type="submit">Entrar</button>
+      </form>
+      <p class="muted login-help">Demo inicial: admin / admin123, cobrador / cobro123</p>
+    </div>
+  </section>
+
+  <aside class="sidebar" id="sidebar" aria-label="Menu principal">
     <div class="brand">
       <div class="brand-mark">$</div>
       <div>
         <strong>Prestamos Pro</strong>
-        <span>Control financiero</span>
+        <span id="sessionLabel">Control financiero</span>
       </div>
     </div>
 
@@ -22,40 +42,31 @@
       <button class="nav-item" data-view="clients">Clientes</button>
       <button class="nav-item" data-view="payments">Pagos</button>
       <button class="nav-item" data-view="due">Vencimientos</button>
-      <button class="nav-item" data-view="settings">Respaldo</button>
+      <button class="nav-item" data-view="reports">Reportes</button>
+      <button class="nav-item admin-only" data-view="settings">Respaldo</button>
     </nav>
   </aside>
 
-  <main class="app">
+  <main class="app" id="appShell">
     <header class="topbar">
       <div>
         <p class="eyebrow">Panel de gestion</p>
         <h1 id="pageTitle">Inicio</h1>
       </div>
       <div class="top-actions">
-        <button class="ghost-btn" id="seedBtn" type="button">Datos demo</button>
+        <button class="ghost-btn admin-only" id="seedBtn" type="button">Datos demo</button>
         <button class="primary-btn" data-open-modal="loanModal" type="button">Nuevo prestamo</button>
+        <button class="ghost-btn" id="logoutBtn" type="button">Salir</button>
       </div>
     </header>
 
     <section class="view active" id="dashboard">
       <div class="metrics-grid">
-        <article class="metric-card">
-          <span>Capital prestado</span>
-          <strong id="metricPrincipal">$0.00</strong>
-        </article>
-        <article class="metric-card">
-          <span>Balance pendiente</span>
-          <strong id="metricBalance">$0.00</strong>
-        </article>
-        <article class="metric-card">
-          <span>Interes proyectado</span>
-          <strong id="metricInterest">$0.00</strong>
-        </article>
-        <article class="metric-card danger">
-          <span>Cuotas vencidas</span>
-          <strong id="metricOverdue">0</strong>
-        </article>
+        <article class="metric-card"><span>Capital prestado</span><strong id="metricPrincipal">$0.00</strong></article>
+        <article class="metric-card"><span>Balance pendiente</span><strong id="metricBalance">$0.00</strong></article>
+        <article class="metric-card"><span>Interes proyectado</span><strong id="metricInterest">$0.00</strong></article>
+        <article class="metric-card danger"><span>Mora acumulada</span><strong id="metricLateFees">$0.00</strong></article>
+        <article class="metric-card danger"><span>Cuotas vencidas</span><strong id="metricOverdue">0</strong></article>
       </div>
 
       <div class="content-grid">
@@ -66,14 +77,7 @@
           </div>
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th>Monto</th>
-                  <th>Balance</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Cliente</th><th>Monto</th><th>Balance</th><th>Estado</th></tr></thead>
               <tbody id="recentLoansTable"></tbody>
             </table>
           </div>
@@ -110,15 +114,7 @@
       </div>
       <div class="table-wrap panel-table">
         <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Documento</th>
-              <th>Telefono</th>
-              <th>Prestamos</th>
-              <th>Accion</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Nombre</th><th>Documento</th><th>Telefono</th><th>Prestamos</th><th>Accion</th></tr></thead>
           <tbody id="clientsTable"></tbody>
         </table>
       </div>
@@ -132,20 +128,10 @@
         <button class="primary-btn" id="registerPaymentBtn" type="button">Registrar pago</button>
       </div>
       <section class="panel">
-        <div class="panel-head">
-          <h2>Historial de pagos</h2>
-          <span id="paymentCount" class="muted"></span>
-        </div>
+        <div class="panel-head"><h2>Historial de pagos</h2><span id="paymentCount" class="muted"></span></div>
         <div class="table-wrap">
           <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Cliente</th>
-                <th>Prestamo</th>
-                <th>Monto</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Fecha</th><th>Cliente</th><th>Prestamo</th><th>Monto</th><th>Accion</th></tr></thead>
             <tbody id="paymentsTable"></tbody>
           </table>
         </div>
@@ -165,6 +151,29 @@
       <div id="dueList" class="due-grid"></div>
     </section>
 
+    <section class="view" id="reports">
+      <div class="toolbar">
+        <input id="reportFrom" type="date">
+        <input id="reportTo" type="date">
+        <button class="primary-btn" id="printReportBtn" type="button">Imprimir reporte</button>
+      </div>
+      <div class="metrics-grid report-metrics">
+        <article class="metric-card"><span>Cobrado periodo</span><strong id="reportCollected">$0.00</strong></article>
+        <article class="metric-card"><span>Prestado periodo</span><strong id="reportLent">$0.00</strong></article>
+        <article class="metric-card"><span>Interes activo</span><strong id="reportInterest">$0.00</strong></article>
+        <article class="metric-card danger"><span>Clientes atrasados</span><strong id="reportLateClients">0</strong></article>
+      </div>
+      <section class="panel">
+        <div class="panel-head"><h2>Resumen por prestamo</h2><span class="muted">Filtrado por fecha</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cliente</th><th>Codigo</th><th>Prestado</th><th>Pagado</th><th>Balance</th><th>Estado</th></tr></thead>
+            <tbody id="reportsTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
     <section class="view" id="settings">
       <div class="settings-grid">
         <section class="panel">
@@ -172,10 +181,7 @@
           <p class="muted">Exporta una copia JSON para guardarla en otro lugar o restaurarla despues.</p>
           <div class="button-row">
             <button class="primary-btn" id="exportBtn" type="button">Exportar respaldo</button>
-            <label class="file-btn">
-              Importar respaldo
-              <input id="importInput" type="file" accept="application/json">
-            </label>
+            <label class="file-btn">Importar respaldo<input id="importInput" type="file" accept="application/json"></label>
           </div>
         </section>
         <section class="panel">
@@ -184,7 +190,35 @@
           <input id="currencyInput" type="text" maxlength="6" value="$">
           <label class="field-label" for="companyInput">Nombre del negocio</label>
           <input id="companyInput" type="text" value="Prestamos Pro">
+          <div class="form-row">
+            <label>Tipo de mora
+              <select id="lateFeeType">
+                <option value="none">Sin mora</option>
+                <option value="fixed">Monto fijo por cuota vencida</option>
+                <option value="daily">Monto diario por cuota vencida</option>
+                <option value="percent">Porcentaje de la cuota vencida</option>
+              </select>
+            </label>
+            <label>Valor de mora<input id="lateFeeValue" type="number" min="0" step="0.01"></label>
+          </div>
           <button class="primary-btn" id="saveSettingsBtn" type="button">Guardar configuracion</button>
+        </section>
+        <section class="panel">
+          <h2>Usuarios</h2>
+          <div class="table-wrap">
+            <table class="compact-table">
+              <thead><tr><th>Usuario</th><th>Rol</th><th>Accion</th></tr></thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
+          <form id="userForm" class="mini-form">
+            <div class="form-row">
+              <label>Usuario<input id="newUserName" required></label>
+              <label>Rol<select id="newUserRole"><option value="collector">Cobrador</option><option value="admin">Administrador</option></select></label>
+            </div>
+            <label>Clave<input id="newUserPass" type="password" required></label>
+            <button class="primary-btn full" type="submit">Crear usuario</button>
+          </form>
         </section>
       </div>
     </section>
@@ -192,16 +226,11 @@
 
   <div class="modal" id="clientModal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
-      <div class="modal-head">
-        <h2 id="clientModalTitle">Nuevo cliente</h2>
-        <button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button>
-      </div>
+      <div class="modal-head"><h2 id="clientModalTitle">Nuevo cliente</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
       <form id="clientForm">
+        <input id="clientEditId" type="hidden">
         <label>Nombre completo<input id="clientName" required></label>
-        <div class="form-row">
-          <label>Documento<input id="clientDocument"></label>
-          <label>Telefono<input id="clientPhone"></label>
-        </div>
+        <div class="form-row"><label>Documento<input id="clientDocument"></label><label>Telefono<input id="clientPhone"></label></div>
         <label>Direccion<textarea id="clientAddress" rows="3"></textarea></label>
         <button class="primary-btn full" type="submit">Guardar cliente</button>
       </form>
@@ -210,46 +239,41 @@
 
   <div class="modal" id="loanModal" aria-hidden="true">
     <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="loanModalTitle">
-      <div class="modal-head">
-        <h2 id="loanModalTitle">Nuevo prestamo</h2>
-        <button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button>
-      </div>
+      <div class="modal-head"><h2 id="loanModalTitle">Nuevo prestamo</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
       <form id="loanForm">
+        <input id="loanEditId" type="hidden">
+        <div class="form-row"><label>Cliente<select id="loanClient" required></select></label><label>Codigo<input id="loanCode" readonly></label></div>
+        <div class="form-row"><label>Monto<input id="loanPrincipal" type="number" min="1" step="0.01" required></label><label>Interes %<input id="loanRate" type="number" min="0" step="0.01" required></label></div>
         <div class="form-row">
-          <label>Cliente<select id="loanClient" required></select></label>
-          <label>Codigo<input id="loanCode" readonly></label>
-        </div>
-        <div class="form-row">
-          <label>Monto<input id="loanPrincipal" type="number" min="1" step="0.01" required></label>
-          <label>Interes %<input id="loanRate" type="number" min="0" step="0.01" required></label>
-        </div>
-        <div class="form-row">
-          <label>Frecuencia
-            <select id="loanFrequency">
-              <option value="weekly">Semanal</option>
-              <option value="biweekly">Quincenal</option>
-              <option value="monthly">Mensual</option>
-            </select>
-          </label>
+          <label>Frecuencia<select id="loanFrequency"><option value="weekly">Semanal</option><option value="biweekly">Quincenal</option><option value="monthly">Mensual</option></select></label>
           <label>Cuotas<input id="loanTerms" type="number" min="1" step="1" value="12" required></label>
         </div>
         <div class="form-row">
           <label>Fecha inicio<input id="loanStartDate" type="date" required></label>
-          <label>Metodo interes
-            <select id="loanInterestType">
-              <option value="flat">Fijo sobre capital</option>
-              <option value="simple">Simple proporcional</option>
-            </select>
-          </label>
+          <label>Metodo interes<select id="loanInterestType"><option value="flat">Fijo sobre capital</option><option value="simple">Simple proporcional</option></select></label>
         </div>
         <label>Nota<textarea id="loanNote" rows="3"></textarea></label>
-        <button class="primary-btn full" type="submit">Crear prestamo</button>
+        <button class="primary-btn full" type="submit">Guardar prestamo</button>
       </form>
     </div>
   </div>
 
-  <div class="toast" id="toast" role="status"></div>
+  <div class="modal" id="loanDetailModal" aria-hidden="true">
+    <div class="modal-card extra-wide" role="dialog" aria-modal="true" aria-labelledby="loanDetailTitle">
+      <div class="modal-head"><h2 id="loanDetailTitle">Detalle del prestamo</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
+      <div id="loanDetailContent"></div>
+    </div>
+  </div>
 
+  <div class="modal" id="receiptModal" aria-hidden="true">
+    <div class="modal-card receipt-card" role="dialog" aria-modal="true" aria-labelledby="receiptTitle">
+      <div class="modal-head no-print"><h2 id="receiptTitle">Recibo de pago</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
+      <div id="receiptContent"></div>
+      <button class="primary-btn full no-print" id="printReceiptBtn" type="button">Imprimir recibo</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
   <script src="app.js"></script>
 </body>
 </html>

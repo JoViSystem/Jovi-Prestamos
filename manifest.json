@@ -1,0 +1,17 @@
+{
+  "name": "Prestamos Pro",
+  "short_name": "Prestamos",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#eef2f7",
+  "theme_color": "#0f766e",
+  "description": "Sistema avanzado para gestion de prestamos, pagos, cuotas y reportes.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
