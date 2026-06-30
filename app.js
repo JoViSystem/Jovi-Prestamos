@@ -366,7 +366,7 @@ function renderLoans() {
         <button class="ghost-btn compact-btn" type="button" data-loan-detail="${loan.id}">Detalle</button>
         <button class="ghost-btn compact-btn" type="button" data-loan-edit="${loan.id}">Editar</button>
         <button class="success-btn compact-btn" type="button" data-loan-whatsapp="${loan.id}">WhatsApp</button>
-        ${isAdmin() ? `<button class="danger-btn compact-btn" type="button" data-loan-delete="${loan.id}">Eliminar</button>` : ""}
+        <button class="danger-btn compact-btn" type="button" data-loan-delete="${loan.id}">Eliminar</button>
       </div>
     </article>`;
   }).join("") : `<div class="empty">No hay prestamos que coincidan con el filtro.</div>`;
@@ -570,7 +570,7 @@ function editLoan(id) {
 }
 
 function deleteLoan(id) {
-  if (!isAdmin() || !confirm("Eliminar prestamo y sus pagos?")) return;
+  if (!confirm("Eliminar prestamo y sus pagos?")) return;
   state.loans = state.loans.filter(loan => loan.id !== id);
   state.payments = state.payments.filter(payment => payment.loanId !== id);
   render();
@@ -721,20 +721,6 @@ function deleteUser(id) {
   render();
 }
 
-function seedDemoData() {
-  if (!isAdmin()) return;
-  if ((state.clients.length || state.loans.length) && !confirm("Esto agregara datos demo a los datos actuales. Continuar?")) return;
-  const c1 = { id: uid("client"), name: "Maria Alvarez", document: "001-1234567-8", phone: "18095550120", address: "Santo Domingo", createdAt: new Date().toISOString() };
-  const c2 = { id: uid("client"), name: "Carlos Mendez", document: "402-7654321-0", phone: "18295550144", address: "Santiago", createdAt: new Date().toISOString() };
-  state.clients.push(c1, c2);
-  const loan1 = { id: uid("loan"), clientId: c1.id, code: `PRE-${String(state.loans.length + 1).padStart(4, "0")}`, principal: 50000, rate: 12, frequency: "weekly", terms: 10, startDate: addDays(today(), -28), interestType: "flat", note: "", createdAt: new Date().toISOString() };
-  const loan2 = { id: uid("loan"), clientId: c2.id, code: `PRE-${String(state.loans.length + 2).padStart(4, "0")}`, principal: 120000, rate: 8, frequency: "monthly", terms: 6, startDate: today(), interestType: "flat", note: "", createdAt: new Date().toISOString() };
-  state.loans.push(loan1, loan2);
-  state.payments.push({ id: uid("payment"), loanId: loan1.id, date: addDays(today(), -14), amount: 11200, userId: currentUser.id, createdAt: new Date().toISOString() });
-  render();
-  showToast("Datos demo agregados.");
-}
-
 function printReport() {
   window.print();
 }
@@ -756,7 +742,6 @@ document.getElementById("loanForm").addEventListener("submit", saveLoan);
 document.getElementById("registerPaymentBtn").addEventListener("click", registerPayment);
 document.getElementById("exportBtn").addEventListener("click", exportBackup);
 document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
-document.getElementById("seedBtn").addEventListener("click", seedDemoData);
 document.getElementById("userForm").addEventListener("submit", createUser);
 document.getElementById("printReceiptBtn").addEventListener("click", () => window.print());
 document.getElementById("printReportBtn").addEventListener("click", printReport);
