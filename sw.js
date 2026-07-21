@@ -1,4 +1,4 @@
-const CACHE_NAME = "prestamos-pro-v3";
+const CACHE_NAME = "jovi-prestamos-pro-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,7 +6,10 @@ const ASSETS = [
   "./app.js",
   "./config.js",
   "./manifest.json",
-  "./icon.svg"
+  "./logo.png",
+  "./logo-192.png",
+  "./logo-180.png",
+  "./favicon-32.png"
 ];
 
 self.addEventListener("install", event => {

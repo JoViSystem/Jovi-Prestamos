@@ -187,7 +187,7 @@ function setView(viewId) {
   els.views.forEach(view => view.classList.toggle("active", view.id === viewId));
   els.navItems.forEach(item => item.classList.toggle("active", item.dataset.view === viewId));
   const active = [...els.navItems].find(item => item.dataset.view === viewId);
-  els.pageTitle.textContent = active ? active.textContent : "Inicio";
+  els.pageTitle.textContent = active ? active.textContent.trim() : "Inicio";
   render();
 }
 
@@ -258,6 +258,7 @@ async function handleSession(newSession) {
   };
 
   applyAuthState();
+  showToast("Cargando tus datos...");
   await loadEverything();
 }
 
@@ -529,12 +530,20 @@ function resetClientForm() {
   document.getElementById("clientEditId").value = "";
 }
 
+function nextLoanCode() {
+  const highest = state.loans.reduce((max, loan) => {
+    const match = /(\d+)$/.exec(loan.code || "");
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return `PRE-${String(highest + 1).padStart(4, "0")}`;
+}
+
 function resetLoanForm() {
   document.getElementById("loanModalTitle").textContent = "Nuevo prestamo";
   document.getElementById("loanForm").reset();
   document.getElementById("loanEditId").value = "";
   fillLoanClientSelect();
-  document.getElementById("loanCode").value = `PRE-${String(state.loans.length + 1).padStart(4, "0")}`;
+  document.getElementById("loanCode").value = nextLoanCode();
   document.getElementById("loanStartDate").value = today();
 }
 
