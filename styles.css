@@ -244,8 +244,8 @@ textarea {
 .nav {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(64px, 1fr);
-  gap: 4px;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
 }
 
 .nav-item {
@@ -253,9 +253,9 @@ textarea {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   width: 100%;
-  padding: 8px 4px;
+  padding: 9px 2px;
   border: 0;
   border-radius: var(--radius-sm);
   color: var(--muted);
@@ -266,9 +266,13 @@ textarea {
   white-space: nowrap;
 }
 
+.nav-item span {
+  display: none;
+}
+
 .nav-item svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.8;
@@ -280,8 +284,16 @@ textarea {
 
 .nav-item.active {
   color: #06222a;
+}
+
+.nav-item.active svg {
   background: linear-gradient(180deg, var(--primary-soft), var(--primary));
-  box-shadow: 0 6px 18px rgba(34, 211, 238, 0.35);
+  box-shadow: 0 6px 16px rgba(34, 211, 238, 0.4);
+  border-radius: 10px;
+  padding: 6px;
+  width: 34px;
+  height: 34px;
+  box-sizing: border-box;
 }
 
 .app {
@@ -1114,12 +1126,30 @@ label,
     gap: 10px;
   }
 
+  .nav-item span {
+    display: block;
+  }
+
+  .nav-item svg {
+    width: 19px;
+    height: 19px;
+  }
+
   .nav-item.active {
     box-shadow: none;
     background: linear-gradient(90deg, rgba(34, 211, 238, 0.16), transparent);
     color: var(--primary-soft);
     border-left: 3px solid var(--primary);
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  .nav-item.active svg {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    width: 19px;
+    height: 19px;
+    color: var(--primary-soft);
   }
 
   .app {
