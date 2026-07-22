@@ -498,7 +498,7 @@ function renderDue() {
   </article>`).join("") : `<div class="empty">No hay cuotas para este filtro.</div>`;
 }
 
-function renderReports() {
+function computeReportData() {
   const from = els.reportFrom.value;
   const to = els.reportTo.value;
   const payments = state.payments.filter(payment => inRange(payment.date, from, to));
@@ -506,17 +506,38 @@ function renderReports() {
   const summaries = state.loans.map(loanSummary);
   const lateClients = new Set(state.loans.filter(loan => loanSummary(loan).status === "late").map(loan => loan.clientId)).size;
 
-  els.reportCollected.textContent = money(payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
-  els.reportLent.textContent = money(loans.reduce((sum, loan) => sum + Number(loan.principal || 0), 0));
-  els.reportInterest.textContent = money(summaries.reduce((sum, item) => sum + item.interest, 0));
-  els.reportLateClients.textContent = lateClients;
+  const collected = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const lent = loans.reduce((sum, loan) => sum + Number(loan.principal || 0), 0);
+  const interest = summaries.reduce((sum, item) => sum + item.interest, 0);
 
-  els.reportsTable.innerHTML = state.loans.length ? state.loans.map(loan => {
+  const rows = state.loans.map(loan => {
     const client = getClient(loan.clientId);
     const summary = loanSummary(loan);
     const paidPeriod = payments.filter(payment => payment.loanId === loan.id).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-    return `<tr><td>${escapeHtml(client?.name || "Sin cliente")}</td><td>${escapeHtml(loan.code)}</td><td>${money(loan.principal)}</td><td>${money(paidPeriod)}</td><td>${money(summary.balance)}</td><td>${statusBadge(summary.status)}</td></tr>`;
-  }).join("") : `<tr><td colspan="6">No hay prestamos para reportar.</td></tr>`;
+    return {
+      client: client?.name || "Sin cliente",
+      code: loan.code,
+      principal: loan.principal,
+      paid: paidPeriod,
+      balance: summary.balance,
+      status: summary.status
+    };
+  });
+
+  return { from, to, collected, lent, interest, lateClients, rows };
+}
+
+function renderReports() {
+  const data = computeReportData();
+
+  els.reportCollected.textContent = money(data.collected);
+  els.reportLent.textContent = money(data.lent);
+  els.reportInterest.textContent = money(data.interest);
+  els.reportLateClients.textContent = data.lateClients;
+
+  els.reportsTable.innerHTML = data.rows.length ? data.rows.map(row =>
+    `<tr><td>${escapeHtml(row.client)}</td><td>${escapeHtml(row.code)}</td><td>${money(row.principal)}</td><td>${money(row.paid)}</td><td>${money(row.balance)}</td><td>${statusBadge(row.status)}</td></tr>`
+  ).join("") : `<tr><td colspan="6">No hay prestamos para reportar.</td></tr>`;
 }
 
 function renderUsers() {
@@ -746,11 +767,13 @@ function sendWhatsApp(loanId) {
   if (!loan || !client) return;
   const summary = loanSummary(loan);
   const next = summary.nextDue;
-  const phone = String(client.phone || "").replace(/\D/g, "");
+  let phone = String(client.phone || "").replace(/\D/g, "");
   if (!phone) {
     showToast("Este cliente no tiene telefono.");
     return;
   }
+  // Numeros locales de 10 digitos (809/829/849, RD) sin codigo de pais -> se lo agregamos.
+  if (phone.length === 10) phone = `1${phone}`;
   const msg = `Hola ${client.name}, le recordamos su prestamo ${loan.code}. ${next ? `Proxima cuota: ${money(next.balance + next.lateFee)} vence el ${dateLabel(next.dueDate)}.` : ""} Balance actual: ${money(summary.balance)}.`;
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank");
 }
@@ -886,6 +909,94 @@ function printReport() {
   window.print();
 }
 
+async function loadImageAsDataUrl(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function downloadReportPdf() {
+  if (!window.jspdf) { showToast("No se pudo cargar el generador de PDF."); return; }
+  showToast("Generando PDF...");
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  const data = computeReportData();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let cursorY = 48;
+
+  const logoUrl = state.settings.logoUrl;
+  if (logoUrl) {
+    const dataUrl = await loadImageAsDataUrl(logoUrl);
+    if (dataUrl) {
+      try { doc.addImage(dataUrl, "PNG", 40, 32, 40, 40); } catch { /* logo no compatible, se omite */ }
+    }
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text(state.settings.company || "Prestamos Pro", 92, 52);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(110);
+  doc.text(`Reporte del ${dateLabel(data.from)} al ${dateLabel(data.to)}`, 92, 68);
+  doc.setTextColor(0);
+  cursorY = 100;
+
+  const metrics = [
+    ["Cobrado en el periodo", money(data.collected)],
+    ["Prestado en el periodo", money(data.lent)],
+    ["Interes activo", money(data.interest)],
+    ["Clientes atrasados", String(data.lateClients)]
+  ];
+  doc.autoTable({
+    startY: cursorY,
+    head: [["Metrica", "Valor"]],
+    body: metrics,
+    theme: "grid",
+    headStyles: { fillColor: [15, 23, 42] },
+    margin: { left: 40, right: 40 },
+    tableWidth: pageWidth - 80
+  });
+
+  cursorY = doc.lastAutoTable.finalY + 24;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Resumen por prestamo", 40, cursorY);
+
+  doc.autoTable({
+    startY: cursorY + 10,
+    head: [["Cliente", "Codigo", "Prestado", "Pagado", "Balance", "Estado"]],
+    body: data.rows.length
+      ? data.rows.map(row => [row.client, row.code, money(row.principal), money(row.paid), money(row.balance), row.status === "active" ? "Activo" : row.status === "late" ? "Atrasado" : "Saldado"])
+      : [["No hay prestamos para reportar.", "", "", "", "", ""]],
+    theme: "striped",
+    headStyles: { fillColor: [15, 23, 42] },
+    styles: { fontSize: 9 },
+    margin: { left: 40, right: 40 }
+  });
+
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text(`Generado el ${dateLabel(today())} - Pagina ${i} de ${pageCount}`, 40, doc.internal.pageSize.getHeight() - 24);
+  }
+
+  doc.save(`reporte-${(state.settings.company || "prestamos").toLowerCase().replaceAll(" ", "-")}-${today()}.pdf`);
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
@@ -909,6 +1020,7 @@ if (els.logoInput) {
 document.getElementById("userForm").addEventListener("submit", createUser);
 document.getElementById("printReceiptBtn").addEventListener("click", () => window.print());
 document.getElementById("printReportBtn").addEventListener("click", printReport);
+document.getElementById("downloadReportPdfBtn").addEventListener("click", downloadReportPdf);
 document.getElementById("importInput").addEventListener("change", event => {
   const file = event.target.files[0];
   if (file) importBackup(file);
