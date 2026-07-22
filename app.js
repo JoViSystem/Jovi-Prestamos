@@ -1037,10 +1037,24 @@ function escapeHtml(value) {
 document.querySelectorAll("[data-open-modal]").forEach(button => button.addEventListener("click", () => openModal(button.dataset.openModal)));
 document.querySelectorAll("[data-close-modal]").forEach(button => button.addEventListener("click", closeModals));
 document.querySelectorAll(".modal").forEach(modal => modal.addEventListener("click", event => { if (event.target === modal) closeModals(); }));
-els.navItems.forEach(item => item.addEventListener("click", () => setView(item.dataset.view)));
+els.navItems.forEach(item => item.addEventListener("click", () => { setView(item.dataset.view); closeSidebar(); }));
 document.querySelectorAll("[data-view-shortcut]").forEach(item => item.addEventListener("click", () => setView(item.dataset.viewShortcut)));
 
 els.loginForm.addEventListener("submit", login);
+function openSidebar() {
+  document.getElementById("sidebar")?.classList.add("open");
+  document.getElementById("sidebarOverlay")?.classList.add("show");
+}
+
+function closeSidebar() {
+  document.getElementById("sidebar")?.classList.remove("open");
+  document.getElementById("sidebarOverlay")?.classList.remove("show");
+}
+
+document.getElementById("menuToggleBtn")?.addEventListener("click", openSidebar);
+document.getElementById("sidebarCloseBtn")?.addEventListener("click", closeSidebar);
+document.getElementById("sidebarOverlay")?.addEventListener("click", closeSidebar);
+
 document.getElementById("logoutBtn").addEventListener("click", logout);
 document.getElementById("clientForm").addEventListener("submit", saveClient);
 document.getElementById("loanForm").addEventListener("submit", saveLoan);

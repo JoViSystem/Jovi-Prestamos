@@ -43,13 +43,18 @@
     </div>
   </section>
 
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <aside class="sidebar" id="sidebar" aria-label="Menu principal">
-    <div class="brand">
-      <div class="brand-mark"><img id="sidebarLogo" src="logo.png" alt="Logo del negocio"></div>
-      <div>
-        <strong id="sidebarBrandName">Jovi System</strong>
-        <span id="sessionLabel">Prestamos Pro</span>
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-mark"><img id="sidebarLogo" src="logo.png" alt="Logo del negocio"></div>
+        <div>
+          <strong id="sidebarBrandName">Jovi System</strong>
+          <span id="sessionLabel">Prestamos Pro</span>
+        </div>
       </div>
+      <button class="icon-btn sidebar-close" id="sidebarCloseBtn" type="button" aria-label="Cerrar menu">x</button>
     </div>
 
     <nav class="nav">
@@ -90,9 +95,14 @@
 
   <main class="app" id="appShell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">Panel de gestion</p>
-        <h1 id="pageTitle">Inicio</h1>
+      <div class="topbar-title-row">
+        <button class="icon-btn menu-toggle" id="menuToggleBtn" type="button" aria-label="Abrir menu">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        <div>
+          <p class="eyebrow">Panel de gestion</p>
+          <h1 id="pageTitle">Inicio</h1>
+        </div>
       </div>
       <div class="top-actions">
         <button class="primary-btn" data-open-modal="loanModal" type="button">Nuevo prestamo</button>
