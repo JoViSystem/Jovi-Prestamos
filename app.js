@@ -1098,6 +1098,6 @@ sb.auth.getSession().then(({ data }) => {
   if (data.session) handleSession(data.session);
 });
 
-if ("serviceWorker" in navigator && location.protocol !== "file:") {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
-}
+// El registro del Service Worker vive en un <script> independiente dentro
+// de index.html (no aqui), para que corra siempre aunque algo en este
+// archivo falle. Ver el final de index.html.

@@ -1,8 +1,10 @@
 {
   "name": "Jovi System - Prestamos Pro",
   "short_name": "Prestamos Pro",
-  "start_url": "./index.html",
+  "start_url": ".",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#060a12",
   "theme_color": "#060a12",
   "description": "Sistema avanzado para gestion de prestamos, pagos, cuotas y reportes. Desarrollado por Jovi System.",
@@ -14,7 +16,7 @@
       "purpose": "any"
     },
     {
-      "src": "logo.png",
+      "src": "logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

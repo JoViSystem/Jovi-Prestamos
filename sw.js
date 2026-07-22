@@ -1,4 +1,4 @@
-const CACHE_NAME = "jovi-prestamos-pro-v5";
+const CACHE_NAME = "jovi-prestamos-pro-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const ASSETS = [
   "./config.js",
   "./manifest.json",
   "./logo.png",
+  "./logo-512.png",
   "./logo-192.png",
   "./logo-180.png",
   "./favicon-32.png"
