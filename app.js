@@ -1,7 +1,7 @@
 const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
 const state = {
-  settings: { currency: "$", company: "Prestamos Pro", lateFeeType: "none", lateFeeValue: 0 },
+  settings: { currency: "$", company: "Prestamos Pro", lateFeeType: "none", lateFeeValue: 0, logoUrl: "" },
   clients: [],
   loans: [],
   payments: [],
@@ -17,6 +17,10 @@ const els = {
   loginForm: document.getElementById("loginForm"),
   pageTitle: document.getElementById("pageTitle"),
   sessionLabel: document.getElementById("sessionLabel"),
+  sidebarLogo: document.getElementById("sidebarLogo"),
+  sidebarBrandName: document.getElementById("sidebarBrandName"),
+  companyLogoPreview: document.getElementById("companyLogoPreview"),
+  logoInput: document.getElementById("logoInput"),
   navItems: document.querySelectorAll(".nav-item"),
   views: document.querySelectorAll(".view"),
   toast: document.getElementById("toast"),
@@ -301,7 +305,8 @@ async function loadEverything() {
         currency: companyRes.data.currency || "$",
         company: companyRes.data.name || "Prestamos Pro",
         lateFeeType: companyRes.data.late_fee_type || "none",
-        lateFeeValue: Number(companyRes.data.late_fee_value || 0)
+        lateFeeValue: Number(companyRes.data.late_fee_value || 0),
+        logoUrl: companyRes.data.logo_url || ""
       };
     }
     state.clients = (clientsRes.data || []).map(rowToClient);
@@ -367,8 +372,10 @@ function renderSettings() {
   els.companyInput.value = state.settings.company;
   els.lateFeeType.value = state.settings.lateFeeType;
   els.lateFeeValue.value = state.settings.lateFeeValue;
-  const brandName = document.querySelector(".brand strong");
-  if (brandName) brandName.textContent = state.settings.company;
+  if (els.sidebarBrandName) els.sidebarBrandName.textContent = state.settings.company || "Prestamos Pro";
+  const logoSrc = state.settings.logoUrl || "logo.png";
+  if (els.sidebarLogo) els.sidebarLogo.src = logoSrc;
+  if (els.companyLogoPreview) els.companyLogoPreview.src = logoSrc;
   document.title = state.settings.company;
 }
 
@@ -820,6 +827,26 @@ async function saveSettings() {
   showToast("Configuracion guardada.");
 }
 
+async function uploadCompanyLogo(file) {
+  if (!isAdmin()) { showToast("Solo un administrador puede cambiar el logo."); return; }
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast("La imagen es muy pesada (maximo 2MB)."); return; }
+
+  if (els.companyLogoPreview) els.companyLogoPreview.src = URL.createObjectURL(file);
+
+  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  const path = `${currentUser.companyId}/logo-${Date.now()}.${ext}`;
+  const { error: uploadError } = await sb.storage.from("company-logos").upload(path, file, { upsert: true });
+  if (uploadError) { showToast("No se pudo subir el logo."); return; }
+
+  const { data: publicUrlData } = sb.storage.from("company-logos").getPublicUrl(path);
+  const { error: updateError } = await sb.from("companies").update({ logo_url: publicUrlData.publicUrl }).eq("id", currentUser.companyId);
+  if (updateError) { showToast("El logo se subio pero no se pudo guardar."); return; }
+
+  await loadEverything();
+  showToast("Logo actualizado.");
+}
+
 async function callManageUser(payload) {
   const res = await fetch(`${window.SUPABASE_URL}/functions/v1/manage-user`, {
     method: "POST",
@@ -876,6 +903,9 @@ document.getElementById("loanForm").addEventListener("submit", saveLoan);
 document.getElementById("registerPaymentBtn").addEventListener("click", registerPayment);
 document.getElementById("exportBtn").addEventListener("click", exportBackup);
 document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
+if (els.logoInput) {
+  els.logoInput.addEventListener("change", (e) => uploadCompanyLogo(e.target.files[0]));
+}
 document.getElementById("userForm").addEventListener("submit", createUser);
 document.getElementById("printReceiptBtn").addEventListener("click", () => window.print());
 document.getElementById("printReportBtn").addEventListener("click", printReport);

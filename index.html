@@ -33,9 +33,9 @@
 
   <aside class="sidebar" id="sidebar" aria-label="Menu principal">
     <div class="brand">
-      <div class="brand-mark"><img src="logo.png" alt="Jovi System"></div>
+      <div class="brand-mark"><img id="sidebarLogo" src="logo.png" alt="Logo del negocio"></div>
       <div>
-        <strong>Jovi System</strong>
+        <strong id="sidebarBrandName">Jovi System</strong>
         <span id="sessionLabel">Prestamos Pro</span>
       </div>
     </div>
@@ -210,6 +210,11 @@
         </section>
         <section class="panel">
           <h2>Configuracion</h2>
+          <label class="field-label" for="logoInput">Logo del negocio</label>
+          <div class="button-row" style="margin-bottom:14px;">
+            <div class="brand-mark" style="width:56px;height:56px;"><img id="companyLogoPreview" src="logo.png" alt="Logo del negocio"></div>
+            <label class="file-btn">Subir logo<input id="logoInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
+          </div>
           <label class="field-label" for="currencyInput">Moneda</label>
           <input id="currencyInput" type="text" maxlength="6" value="$">
           <label class="field-label" for="companyInput">Nombre del negocio</label>

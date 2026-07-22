@@ -54,12 +54,29 @@
       <h2>Empresas existentes</h2>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Empresa</th><th>Creada</th></tr></thead>
+          <thead><tr><th>Empresa</th><th>Creada</th><th>Accion</th></tr></thead>
           <tbody id="companiesTable"></tbody>
         </table>
       </div>
     </section>
   </main>
+
+  <div class="modal" id="editCompanyModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editCompanyTitle">
+      <div class="modal-head"><h2 id="editCompanyTitle">Editar empresa</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
+      <form id="editCompanyForm">
+        <input id="editCompanyId" type="hidden">
+        <label>Nombre de la empresa<input id="editCompanyName" required></label>
+        <label>Logo del negocio
+          <div class="button-row">
+            <div class="brand-mark" style="width:56px;height:56px;"><img id="editCompanyLogoPreview" src="logo.png" alt="Logo"></div>
+            <label class="file-btn">Subir logo<input id="editCompanyLogoInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
+          </div>
+        </label>
+        <button class="primary-btn full" type="submit">Guardar cambios</button>
+      </form>
+    </div>
+  </div>
 
   <div class="toast" id="toast" role="status"></div>
 
@@ -80,12 +97,29 @@
       return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     }
 
+    let companiesCache = [];
+
     async function loadCompanies() {
       const { data, error } = await sb.from("companies").select("*").order("created_at", { ascending: false });
       if (error) { showToast("No se pudo cargar la lista (¿tu cuenta es 'owner'?)."); return; }
-      document.getElementById("companiesTable").innerHTML = data.length
-        ? data.map(c => `<tr><td>${escapeHtml(c.name)}</td><td>${new Date(c.created_at).toLocaleDateString("es-DO")}</td></tr>`).join("")
-        : `<tr><td colspan="2">Aun no hay empresas.</td></tr>`;
+      companiesCache = data || [];
+      document.getElementById("companiesTable").innerHTML = companiesCache.length
+        ? companiesCache.map(c => `<tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="brand-mark" style="width:34px;height:34px;flex-shrink:0;"><img src="${c.logo_url ? escapeHtml(c.logo_url) : "logo.png"}" alt=""></div>
+                <span>${escapeHtml(c.name)}</span>
+              </div>
+            </td>
+            <td>${new Date(c.created_at).toLocaleDateString("es-DO")}</td>
+            <td>
+              <div class="action-row" style="margin-top:0;">
+                <button class="ghost-btn compact-btn" type="button" data-edit-company="${c.id}">Editar</button>
+                <button class="danger-btn compact-btn" type="button" data-delete-company="${c.id}">Eliminar</button>
+              </div>
+            </td>
+          </tr>`).join("")
+        : `<tr><td colspan="3">Aun no hay empresas.</td></tr>`;
     }
 
     async function handleSession(s) {
@@ -126,6 +160,70 @@
       e.target.reset();
       await loadCompanies();
       showToast(`Empresa creada. Entrega a tu cliente: ${email} / la clave que escribiste.`);
+    });
+
+    function closeModals() {
+      document.querySelectorAll(".modal").forEach(modal => { modal.classList.remove("open"); modal.setAttribute("aria-hidden", "true"); });
+    }
+
+    document.querySelectorAll("[data-close-modal]").forEach(btn => btn.addEventListener("click", closeModals));
+    document.querySelectorAll(".modal").forEach(modal => modal.addEventListener("click", e => { if (e.target === modal) closeModals(); }));
+
+    document.getElementById("companiesTable").addEventListener("click", async (e) => {
+      const editId = e.target.dataset.editCompany;
+      const deleteId = e.target.dataset.deleteCompany;
+
+      if (editId) {
+        const company = companiesCache.find(c => c.id === editId);
+        if (!company) return;
+        document.getElementById("editCompanyId").value = company.id;
+        document.getElementById("editCompanyName").value = company.name;
+        document.getElementById("editCompanyLogoPreview").src = company.logo_url || "logo.png";
+        document.getElementById("editCompanyModal").classList.add("open");
+        document.getElementById("editCompanyModal").setAttribute("aria-hidden", "false");
+      }
+
+      if (deleteId) {
+        const company = companiesCache.find(c => c.id === deleteId);
+        if (!company) return;
+        if (!confirm(`Eliminar "${company.name}" permanentemente? Se borraran sus usuarios, clientes, prestamos y pagos. Esto no se puede deshacer.`)) return;
+        const res = await fetch(`${window.SUPABASE_URL}/functions/v1/manage-user`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ action: "delete_company", companyId: deleteId })
+        });
+        const result = await res.json();
+        if (result.error) { showToast(result.error); return; }
+        await loadCompanies();
+        showToast("Empresa eliminada.");
+      }
+    });
+
+    document.getElementById("editCompanyLogoInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) document.getElementById("editCompanyLogoPreview").src = URL.createObjectURL(file);
+    });
+
+    document.getElementById("editCompanyForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const id = document.getElementById("editCompanyId").value;
+      const name = document.getElementById("editCompanyName").value.trim();
+      const file = document.getElementById("editCompanyLogoInput").files[0];
+      const updates = { name };
+
+      if (file) {
+        const path = `${id}/logo-${Date.now()}.${file.name.split(".").pop()}`;
+        const { error: uploadError } = await sb.storage.from("company-logos").upload(path, file, { upsert: true });
+        if (uploadError) { showToast("No se pudo subir el logo."); return; }
+        updates.logo_url = sb.storage.from("company-logos").getPublicUrl(path).data.publicUrl;
+      }
+
+      const { error } = await sb.from("companies").update(updates).eq("id", id);
+      if (error) { showToast("No se pudo guardar (revisa que tu cuenta sea 'owner')."); return; }
+      closeModals();
+      document.getElementById("editCompanyLogoInput").value = "";
+      await loadCompanies();
+      showToast("Empresa actualizada.");
     });
 
     sb.auth.getSession().then(({ data }) => { if (data.session) handleSession(data.session); });
