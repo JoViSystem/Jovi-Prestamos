@@ -68,6 +68,69 @@ body.locked .app {
 }
 
 /* ---------------------------------------------------------------------
+   Aviso de instalar app
+   --------------------------------------------------------------------- */
+
+.install-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 70;
+  padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
+  background: rgba(10, 16, 28, 0.97);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line-bright);
+  transform: translateY(-100%);
+  transition: transform 0.25s ease;
+}
+
+.install-banner.show {
+  transform: translateY(0);
+}
+
+.install-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.install-banner-logo {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.install-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.install-banner-text strong {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: #fff;
+}
+
+.install-banner-text span {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.install-banner-close {
+  width: 32px;
+  min-height: 32px;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------
    Marca / brand
    --------------------------------------------------------------------- */
 

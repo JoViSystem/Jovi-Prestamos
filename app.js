@@ -1,7 +1,7 @@
 const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
 const state = {
-  settings: { currency: "$", company: "Prestamos Pro", lateFeeType: "none", lateFeeValue: 0, logoUrl: "" },
+  settings: { currency: "$", company: "Prestamos Pro", lateFeeType: "none", lateFeeValue: 0, logoUrl: "", themeColor: "#22d3ee" },
   clients: [],
   loans: [],
   payments: [],
@@ -50,6 +50,8 @@ const els = {
   reportInterest: document.getElementById("reportInterest"),
   reportLateClients: document.getElementById("reportLateClients"),
   currencyInput: document.getElementById("currencyInput"),
+  themeColorInput: document.getElementById("themeColorInput"),
+  resetThemeBtn: document.getElementById("resetThemeBtn"),
   companyInput: document.getElementById("companyInput"),
   lateFeeType: document.getElementById("lateFeeType"),
   lateFeeValue: document.getElementById("lateFeeValue"),
@@ -184,8 +186,8 @@ function showToast(message) {
 }
 
 function setView(viewId) {
-  if (viewId === "settings" && !isAdmin()) {
-    showToast("Solo el administrador puede abrir respaldo y configuracion.");
+  if ((viewId === "settings" || viewId === "config") && !isAdmin()) {
+    showToast("Solo el administrador puede abrir esa seccion.");
     return;
   }
   els.views.forEach(view => view.classList.toggle("active", view.id === viewId));
@@ -306,7 +308,8 @@ async function loadEverything() {
         company: companyRes.data.name || "Prestamos Pro",
         lateFeeType: companyRes.data.late_fee_type || "none",
         lateFeeValue: Number(companyRes.data.late_fee_value || 0),
-        logoUrl: companyRes.data.logo_url || ""
+        logoUrl: companyRes.data.logo_url || "",
+        themeColor: companyRes.data.theme_color || "#22d3ee"
       };
     }
     state.clients = (clientsRes.data || []).map(rowToClient);
@@ -367,6 +370,35 @@ function render() {
   fillPaymentLoanSelect();
 }
 
+function shadeColor(hex, percent) {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const amt = Math.round(2.55 * percent);
+  const r = Math.min(255, Math.max(0, (num >> 16) + amt));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amt));
+  const b = Math.min(255, Math.max(0, (num & 0x0000ff) + amt));
+  return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+}
+
+function applyTheme(color) {
+  const safe = /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#22d3ee";
+  document.documentElement.style.setProperty("--primary", safe);
+  document.documentElement.style.setProperty("--primary-soft", shadeColor(safe, 20));
+  document.documentElement.style.setProperty("--primary-dark", shadeColor(safe, -25));
+  if (els.themeColorInput) els.themeColorInput.value = safe;
+  document.querySelectorAll(".theme-swatch").forEach(btn => {
+    btn.style.boxShadow = btn.dataset.color.toLowerCase() === safe.toLowerCase() ? "0 0 0 2px #060a12, 0 0 0 4px var(--primary)" : "none";
+  });
+}
+
+async function saveThemeColor(color) {
+  if (!isAdmin()) return;
+  applyTheme(color);
+  const { error } = await sb.from("companies").update({ theme_color: color }).eq("id", currentUser.companyId);
+  if (error) { showToast("No se pudo guardar el color."); return; }
+  state.settings.themeColor = color;
+  showToast("Color actualizado.");
+}
+
 function renderSettings() {
   els.currencyInput.value = state.settings.currency;
   els.companyInput.value = state.settings.company;
@@ -376,6 +408,7 @@ function renderSettings() {
   const logoSrc = state.settings.logoUrl || "logo.png";
   if (els.sidebarLogo) els.sidebarLogo.src = logoSrc;
   if (els.companyLogoPreview) els.companyLogoPreview.src = logoSrc;
+  applyTheme(state.settings.themeColor);
   document.title = state.settings.company;
 }
 
@@ -1016,6 +1049,15 @@ document.getElementById("exportBtn").addEventListener("click", exportBackup);
 document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
 if (els.logoInput) {
   els.logoInput.addEventListener("change", (e) => uploadCompanyLogo(e.target.files[0]));
+}
+document.querySelectorAll(".theme-swatch").forEach(btn => {
+  btn.addEventListener("click", () => saveThemeColor(btn.dataset.color));
+});
+if (els.themeColorInput) {
+  els.themeColorInput.addEventListener("change", (e) => saveThemeColor(e.target.value));
+}
+if (els.resetThemeBtn) {
+  els.resetThemeBtn.addEventListener("click", () => saveThemeColor("#22d3ee"));
 }
 document.getElementById("userForm").addEventListener("submit", createUser);
 document.getElementById("printReceiptBtn").addEventListener("click", () => window.print());
