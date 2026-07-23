@@ -25,8 +25,20 @@
         <label>Clave<input id="loginPass" type="password" required></label>
         <button class="primary-btn full" type="submit">Entrar</button>
       </form>
+      <p class="muted login-help"><button class="link-btn" id="forgotPasswordLink" type="button" style="padding:0;">Olvide mi clave</button></p>
     </div>
   </section>
+
+  <div class="modal" id="forgotPasswordModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
+      <div class="modal-head"><h2 id="forgotPasswordTitle">Recuperar clave</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
+      <p class="muted" style="margin-bottom:14px;">Te enviaremos un enlace a tu correo para crear una clave nueva.</p>
+      <form id="forgotPasswordForm">
+        <label>Correo electronico<input id="forgotPasswordEmail" type="email" required></label>
+        <button class="primary-btn full" type="submit">Enviar enlace</button>
+      </form>
+    </div>
+  </div>
 
   <main id="ownerApp" style="display:none;">
     <header class="topbar">
@@ -128,6 +140,19 @@
       document.getElementById("ownerApp").style.display = "block";
       await loadCompanies();
     }
+
+    document.getElementById("forgotPasswordLink").addEventListener("click", () => {
+      document.getElementById("forgotPasswordModal").classList.add("open");
+    });
+    document.getElementById("forgotPasswordForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("forgotPasswordEmail").value.trim();
+      const redirectTo = `${location.origin}${location.pathname.replace(/owner\.html$/, "")}reset-password.html`;
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) { showToast("No se pudo enviar el correo."); return; }
+      closeModals();
+      showToast("Si el correo existe, te llegara un enlace para cambiar tu clave.");
+    });
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();

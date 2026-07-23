@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#060a12">
+  <title>Terminos de Servicio - Jovi System</title>
+  <link rel="icon" href="favicon-32.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { padding: 24px 18px 60px; max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    h2 { font-size: 16px; margin-top: 28px; }
+    p, li { color: #cbd5e1; line-height: 1.6; font-size: 14.5px; }
+    .notice { background: rgba(245,165,36,0.1); border: 1px solid rgba(245,165,36,0.35); border-radius: var(--radius-sm); padding: 14px; margin: 18px 0; font-size: 13px; color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div class="brand" style="margin-bottom:18px;">
+    <div class="brand-mark"><img src="logo.png" alt="Jovi System"></div>
+    <div><strong>Jovi System</strong><span>Prestamos Pro</span></div>
+  </div>
+
+  <h1>Terminos de Servicio</h1>
+  <p class="muted">Ultima actualizacion: <span id="updateDate"></span></p>
+
+  <div class="notice">
+    Esta es una plantilla generica de referencia, no un documento legal redactado por un abogado. Antes de usarla formalmente con tus clientes, te recomendamos que un abogado la revise y la ajuste a las leyes de tu pais y a tu negocio en especifico.
+  </div>
+
+  <h2>1. Aceptacion de los terminos</h2>
+  <p>Al crear una cuenta o usar este sistema ("el Servicio"), aceptas estos Terminos de Servicio en su totalidad. Si no estas de acuerdo, no debes usar el Servicio.</p>
+
+  <h2>2. Descripcion del Servicio</h2>
+  <p>El Servicio es una herramienta de software para la gestion de prestamos, clientes, pagos y reportes, ofrecida como suscripcion (Software as a Service).</p>
+
+  <h2>3. Cuentas y responsabilidad del usuario</h2>
+  <p>Eres responsable de mantener la confidencialidad de tu correo y clave de acceso, y de toda actividad que ocurra bajo tu cuenta. Debes notificarnos de inmediato ante cualquier uso no autorizado.</p>
+
+  <h2>4. Datos de terceros (tus clientes)</h2>
+  <p>Al ingresar informacion de tus propios clientes (nombres, documentos, telefonos, montos de prestamos) en el Servicio, declaras que cuentas con el consentimiento necesario de esas personas para procesar sus datos, y aceptas cumplir con las leyes de proteccion de datos aplicables en tu jurisdiccion.</p>
+
+  <h2>5. Pagos y facturacion</h2>
+  <p>El acceso al Servicio requiere el pago de la suscripcion acordada. La falta de pago puede resultar en la suspension o cancelacion del acceso a la cuenta.</p>
+
+  <h2>6. Disponibilidad del Servicio</h2>
+  <p>Hacemos un esfuerzo razonable por mantener el Servicio disponible, pero no garantizamos que funcione sin interrupciones. Podemos realizar mantenimientos que afecten temporalmente el acceso.</p>
+
+  <h2>7. Limitacion de responsabilidad</h2>
+  <p>El Servicio se ofrece "tal cual". No somos responsables por perdidas de negocio, datos incorrectos ingresados por el usuario, ni por decisiones financieras tomadas con base en la informacion del sistema.</p>
+
+  <h2>8. Cancelacion</h2>
+  <p>Puedes cancelar tu suscripcion en cualquier momento. Al cancelar, podemos eliminar tus datos despues de un periodo razonable de retencion, salvo que la ley exija conservarlos por mas tiempo.</p>
+
+  <h2>9. Cambios a estos terminos</h2>
+  <p>Podemos actualizar estos terminos ocasionalmente. Te notificaremos de cambios importantes.</p>
+
+  <h2>10. Contacto</h2>
+  <p>Para preguntas sobre estos terminos, contactanos a: [correo/telefono de contacto].</p>
+
+  <script>
+    document.getElementById("updateDate").textContent = new Date().toLocaleDateString("es-DO", { year: "numeric", month: "long", day: "numeric" });
+  </script>
+</body>
+</html>

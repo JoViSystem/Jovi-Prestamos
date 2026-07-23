@@ -209,6 +209,7 @@ function setView(viewId) {
     showToast("Solo el administrador puede abrir esa seccion.");
     return;
   }
+  if (viewId === "config") loadAuditLog();
   els.views.forEach(view => view.classList.toggle("active", view.id === viewId));
   els.navItems.forEach(item => item.classList.toggle("active", item.dataset.view === viewId));
   const active = [...els.navItems].find(item => item.dataset.view === viewId);
@@ -301,6 +302,7 @@ function rowToLoan(row) {
     frequency: row.frequency, terms: row.terms, startDate: row.start_date, interestType: row.interest_type,
     note: row.note, createdAt: row.created_at,
     statusOverride: row.status_override || null,
+    refinancedFrom: row.refinanced_from || null,
     installmentOverrides: (row.installment_overrides && typeof row.installment_overrides === "object" && !Array.isArray(row.installment_overrides)) ? row.installment_overrides : {}
   };
 }
@@ -694,6 +696,33 @@ function editClient(id) {
   document.getElementById("clientAddress").value = client.address || "";
 }
 
+async function loadAuditLog() {
+  const table = document.getElementById("auditLogTable");
+  if (!table) return;
+  const { data, error } = await sb.from("audit_log").select("*").order("created_at", { ascending: false }).limit(50);
+  if (error) { table.innerHTML = `<tr><td colspan="4">No se pudo cargar.</td></tr>`; return; }
+  table.innerHTML = (data && data.length) ? data.map(entry => `<tr>
+      <td>${new Date(entry.created_at).toLocaleString("es-DO")}</td>
+      <td>${escapeHtml(entry.actor_name || "usuario")}</td>
+      <td>${escapeHtml(entry.action)}${entry.target_label ? `: ${escapeHtml(entry.target_label)}` : ""}</td>
+      <td class="muted">${escapeHtml(entry.details || "")}</td>
+    </tr>`).join("") : `<tr><td colspan="4">Sin actividad registrada todavia.</td></tr>`;
+}
+
+async function logAudit(action, targetType, targetLabel, details) {
+  try {
+    await sb.from("audit_log").insert({
+      company_id: currentUser.companyId,
+      actor_id: currentUser.id,
+      actor_name: currentUser.username || "usuario",
+      action,
+      target_type: targetType,
+      target_label: targetLabel,
+      details: details || null
+    });
+  } catch { /* la auditoria nunca debe bloquear la accion principal */ }
+}
+
 async function deleteClient(id) {
   if (!isAdmin()) return;
   if (state.loans.some(loan => loan.clientId === id)) {
@@ -701,8 +730,10 @@ async function deleteClient(id) {
     return;
   }
   if (!confirm("Eliminar cliente permanentemente?")) return;
+  const client = getClient(id);
   const { error } = await sb.from("clients").delete().eq("id", id);
   if (error) { showToast("No se pudo eliminar."); return; }
+  await logAudit("Elimino cliente", "cliente", client?.name || id);
   await loadEverything();
 }
 
@@ -714,6 +745,7 @@ async function saveLoan(event) {
     return;
   }
   const id = document.getElementById("loanEditId").value;
+  const refinanceFrom = document.getElementById("loanRefinanceFrom").value;
   const data = {
     client_id: clientId,
     code: document.getElementById("loanCode").value,
@@ -725,16 +757,48 @@ async function saveLoan(event) {
     interest_type: document.getElementById("loanInterestType").value,
     note: document.getElementById("loanNote").value.trim()
   };
-  let error;
+  let error, newLoan;
   if (id) {
     ({ error } = await sb.from("loans").update(data).eq("id", id));
+  } else if (refinanceFrom) {
+    ({ data: newLoan, error } = await sb.from("loans").insert({ ...data, company_id: currentUser.companyId, created_by: currentUser.id, refinanced_from: refinanceFrom }).select().single());
   } else {
     ({ error } = await sb.from("loans").insert({ ...data, company_id: currentUser.companyId, created_by: currentUser.id }));
   }
   if (error) { showToast("No se pudo guardar el prestamo."); return; }
+
+  if (refinanceFrom && newLoan) {
+    const oldLoan = state.loans.find(item => item.id === refinanceFrom);
+    await sb.from("loans").update({ status_override: "closed" }).eq("id", refinanceFrom);
+    await logAudit("Refinancio prestamo", "prestamo", oldLoan?.code || refinanceFrom, `Nuevo prestamo: ${data.code}`);
+    document.getElementById("loanRefinanceFrom").value = "";
+  }
+
   closeModals();
   await loadEverything();
-  showToast("Prestamo guardado.");
+  showToast(refinanceFrom ? "Refinanciamiento completado." : "Prestamo guardado.");
+}
+
+function refinanceLoan(id) {
+  const loan = state.loans.find(item => item.id === id);
+  if (!loan) return;
+  const summary = loanSummary(loan);
+  closeModals();
+  openModal("loanModal");
+  fillLoanClientSelect();
+  document.getElementById("loanModalTitle").textContent = `Refinanciar ${loan.code}`;
+  document.getElementById("loanEditId").value = "";
+  document.getElementById("loanRefinanceFrom").value = loan.id;
+  document.getElementById("loanClient").value = loan.clientId;
+  document.getElementById("loanCode").value = nextLoanCode();
+  document.getElementById("loanPrincipal").value = summary.balance.toFixed(2);
+  document.getElementById("loanRate").value = loan.rate;
+  document.getElementById("loanFrequency").value = loan.frequency;
+  document.getElementById("loanTerms").value = loan.terms;
+  document.getElementById("loanStartDate").value = today();
+  document.getElementById("loanInterestType").value = loan.interestType;
+  document.getElementById("loanNote").value = `Refinanciamiento de ${loan.code} (balance anterior: ${money(summary.balance)})`;
+  showToast(`Completando refinanciamiento. Balance anterior: ${money(summary.balance)}.`);
 }
 
 function editLoan(id) {
@@ -744,6 +808,7 @@ function editLoan(id) {
   openModal("loanModal");
   document.getElementById("loanModalTitle").textContent = "Editar prestamo";
   document.getElementById("loanEditId").value = loan.id;
+  document.getElementById("loanRefinanceFrom").value = "";
   document.getElementById("loanClient").value = loan.clientId;
   document.getElementById("loanCode").value = loan.code;
   document.getElementById("loanPrincipal").value = loan.principal;
@@ -758,8 +823,10 @@ function editLoan(id) {
 async function deleteLoan(id) {
   if (!isAdmin()) { showToast("Solo el administrador puede eliminar prestamos."); return; }
   if (!confirm("Eliminar prestamo y sus pagos?")) return;
+  const loan = state.loans.find(item => item.id === id);
   const { error } = await sb.from("loans").delete().eq("id", id);
   if (error) { showToast("No se pudo eliminar."); return; }
+  await logAudit("Elimino prestamo", "prestamo", loan?.code || id);
   await loadEverything();
 }
 
@@ -789,8 +856,10 @@ async function registerPayment() {
 
 async function deletePayment(id) {
   if (!isAdmin() || !confirm("Eliminar este pago?")) return;
+  const payment = state.payments.find(item => item.id === id);
   const { error } = await sb.from("payments").delete().eq("id", id);
   if (error) { showToast("No se pudo eliminar."); return; }
+  await logAudit("Elimino pago", "pago", payment ? money(payment.amount) : id);
   await loadEverything();
 }
 
@@ -813,6 +882,12 @@ function showLoanDetail(id) {
     return `<tr><td>${item.number}</td><td>${dateLabel(item.dueDate)}</td><td>${money(item.amount)}</td><td>${money(item.paid)}</td><td>${money(item.lateFee)}</td><td>${statusBadge(badgeStatus, label)}${forcedNote}</td><td class="no-print">${select}</td></tr>`;
   }).join("");
   const paymentRows = loanPayments(loan.id).map(payment => `<tr><td>${dateLabel(payment.date)}</td><td>${money(payment.amount)}</td><td><button class="ghost-btn compact-btn" type="button" data-payment-receipt="${payment.id}">Recibo</button></td></tr>`).join("");
+  const refinancedInto = state.loans.find(item => item.refinancedFrom === loan.id);
+  const refinanceNote = loan.refinancedFrom
+    ? `<p class="muted" style="margin-top:6px;">Este prestamo nace de un refinanciamiento.</p>`
+    : refinancedInto
+      ? `<p class="muted" style="margin-top:6px;">Este prestamo fue refinanciado en <strong>${escapeHtml(refinancedInto.code)}</strong>.</p>`
+      : "";
   document.getElementById("loanDetailTitle").textContent = `${client.name} - ${loan.code}`;
   document.getElementById("loanDetailContent").innerHTML = `
     <div class="detail-grid">
@@ -821,7 +896,12 @@ function showLoanDetail(id) {
       <div class="detail-box"><span>Mora</span><strong>${money(summary.lateFees)}</strong></div>
       <div class="detail-box"><span>Balance</span><strong>${money(summary.balance)}</strong></div>
     </div>
-    <div class="action-row no-print"><button class="success-btn compact-btn" type="button" data-loan-whatsapp="${loan.id}">Enviar WhatsApp</button><button class="ghost-btn compact-btn" type="button" data-loan-edit="${loan.id}">Editar</button></div>
+    <div class="action-row no-print">
+      <button class="success-btn compact-btn" type="button" data-loan-whatsapp="${loan.id}">Enviar WhatsApp</button>
+      <button class="ghost-btn compact-btn" type="button" data-loan-edit="${loan.id}">Editar</button>
+      ${admin && summary.status !== "closed" ? `<button class="ghost-btn compact-btn" type="button" data-loan-refinance="${loan.id}">Refinanciar</button>` : ""}
+    </div>
+    ${refinanceNote}
     ${admin ? `
     <div class="panel no-print" style="margin-top:14px;padding:14px;">
       <label class="field-label" for="loanStatusOverride">Estado del prestamo${loan.statusOverride ? ` <span class="muted" style="text-transform:none;font-weight:500;">(forzado manualmente)</span>` : ""}</label>
@@ -845,8 +925,11 @@ async function saveLoanStatusOverride(loanId) {
   if (!isAdmin()) return;
   const select = document.getElementById("loanStatusOverride");
   const value = select.value || null;
+  const loan = state.loans.find(item => item.id === loanId);
   const { error } = await sb.from("loans").update({ status_override: value }).eq("id", loanId);
   if (error) { showToast("No se pudo guardar el estado."); return; }
+  const labels = { active: "Activo", late: "Atrasado", closed: "Saldado (perdon de deuda)" };
+  await logAudit(value ? "Forzo estado del prestamo" : "Volvio el estado a automatico", "prestamo", loan?.code || loanId, value ? labels[value] : null);
   await loadEverything();
   showLoanDetail(loanId);
   showToast(value ? "Estado forzado guardado." : "Estado vuelto a automatico.");
@@ -877,6 +960,7 @@ async function registerManualInstallmentPayment(loanId, installmentNumber) {
   delete overrides[installmentNumber];
   await sb.from("loans").update({ installment_overrides: overrides }).eq("id", loanId);
 
+  await logAudit("Marco cuota pagada manualmente", "prestamo", loan.code, `Cuota #${installmentNumber} - ${money(item.amount)}`);
   await loadEverything();
   showLoanDetail(loanId);
   showToast("Pago registrado y cuota marcada como pagada.");
@@ -892,9 +976,10 @@ async function setInstallmentOverride(loanId, installmentNumber, value) {
   if (value) overrides[installmentNumber] = value; else delete overrides[installmentNumber];
   const { error } = await sb.from("loans").update({ installment_overrides: overrides }).eq("id", loanId);
   if (error) { showToast("No se pudo actualizar la cuota."); return; }
+  const labels = { pending: "Pendiente", in_process: "En proceso" };
+  await logAudit(value ? "Forzo estado de cuota" : "Volvio cuota a automatico", "prestamo", loan.code, value ? `Cuota #${installmentNumber} - ${labels[value]}` : `Cuota #${installmentNumber}`);
   await loadEverything();
   showLoanDetail(loanId);
-  const labels = { pending: "Pendiente", in_process: "En proceso" };
   showToast(value ? `Cuota marcada como: ${labels[value]}.` : "Cuota vuelta a automatico.");
 }
 
@@ -1222,6 +1307,20 @@ els.navItems.forEach(item => item.addEventListener("click", () => { setView(item
 document.querySelectorAll("[data-view-shortcut]").forEach(item => item.addEventListener("click", () => setView(item.dataset.viewShortcut)));
 
 els.loginForm.addEventListener("submit", login);
+
+document.getElementById("forgotPasswordLink")?.addEventListener("click", () => {
+  document.getElementById("forgotPasswordModal").classList.add("open");
+});
+
+document.getElementById("forgotPasswordForm")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = document.getElementById("forgotPasswordEmail").value.trim();
+  const redirectTo = `${location.origin}${location.pathname.replace(/index\.html$/, "")}reset-password.html`;
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) { showToast("No se pudo enviar el correo. Verifica el correo escrito."); return; }
+  document.getElementById("forgotPasswordModal").classList.remove("open");
+  showToast("Si el correo existe, te llegara un enlace para cambiar tu clave.");
+});
 function openSidebar() {
   document.getElementById("sidebar")?.classList.add("open");
   document.getElementById("sidebarOverlay")?.classList.add("show");
@@ -1276,6 +1375,7 @@ document.addEventListener("click", event => {
   if (target.dataset.clientDelete) deleteClient(target.dataset.clientDelete);
   if (target.dataset.loanDetail) showLoanDetail(target.dataset.loanDetail);
   if (target.dataset.loanEdit) editLoan(target.dataset.loanEdit);
+  if (target.dataset.loanRefinance) refinanceLoan(target.dataset.loanRefinance);
   if (target.dataset.loanDelete) deleteLoan(target.dataset.loanDelete);
   if (target.dataset.loanWhatsapp) sendWhatsApp(target.dataset.loanWhatsapp);
   if (target.dataset.paymentReceipt) showReceipt(target.dataset.paymentReceipt);

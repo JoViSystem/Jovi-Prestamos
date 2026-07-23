@@ -39,9 +39,21 @@
         <label>Clave<input id="loginPass" type="password" autocomplete="current-password" required></label>
         <button class="primary-btn full" type="submit">Entrar</button>
       </form>
-      <p class="muted login-help">Acceso reservado para usuarios autorizados.</p>
+      <p class="muted login-help"><button class="link-btn" id="forgotPasswordLink" type="button" style="padding:0;">Olvide mi clave</button> &middot; <a href="index.html?demo=1" style="color:var(--primary-soft);">Ver demo</a></p>
+      <p class="muted login-help" style="font-size:11px;">Al continuar aceptas los <a href="terminos.html" target="_blank" style="color:var(--primary-soft);">Terminos</a> y la <a href="privacidad.html" target="_blank" style="color:var(--primary-soft);">Politica de privacidad</a>.</p>
     </div>
   </section>
+
+  <div class="modal" id="forgotPasswordModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
+      <div class="modal-head"><h2 id="forgotPasswordTitle">Recuperar clave</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
+      <p class="muted" style="margin-bottom:14px;">Te enviaremos un enlace a tu correo para crear una clave nueva.</p>
+      <form id="forgotPasswordForm">
+        <label>Correo electronico<input id="forgotPasswordEmail" type="email" required></label>
+        <button class="primary-btn full" type="submit">Enviar enlace</button>
+      </form>
+    </div>
+  </div>
 
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -308,6 +320,16 @@
             <button class="primary-btn full" type="submit">Crear usuario</button>
           </form>
         </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Auditoria</h2><span class="muted">Ultimas 50 acciones</span></div>
+          <div class="table-wrap">
+            <table class="compact-table">
+              <thead><tr><th>Fecha</th><th>Usuario</th><th>Accion</th><th>Detalle</th></tr></thead>
+              <tbody id="auditLogTable"><tr><td colspan="4">Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </section>
   </main>
@@ -330,6 +352,7 @@
       <div class="modal-head"><h2 id="loanModalTitle">Nuevo prestamo</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
       <form id="loanForm">
         <input id="loanEditId" type="hidden">
+        <input id="loanRefinanceFrom" type="hidden">
         <div class="form-row"><label>Cliente<select id="loanClient" required></select></label><label>Codigo<input id="loanCode" readonly></label></div>
         <div class="form-row"><label>Monto<input id="loanPrincipal" type="number" min="1" step="0.01" required></label><label>Interes %<input id="loanRate" type="number" min="0" step="0.01" required></label></div>
         <div class="form-row">
@@ -383,6 +406,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="config.js"></script>
+  <script src="demo.js"></script>
   <script src="install.js"></script>
   <script src="app.js"></script>
   <script>
