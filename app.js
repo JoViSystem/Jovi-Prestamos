@@ -148,14 +148,32 @@ function generateSchedule(loan) {
   const amount = total / terms;
   const step = paymentStep(loan.frequency);
   let remainingPaid = totalPaid(loan.id);
+  const overrides = (loan.installmentOverrides && typeof loan.installmentOverrides === "object" && !Array.isArray(loan.installmentOverrides)) ? loan.installmentOverrides : {};
 
   return Array.from({ length: terms }, (_, index) => {
+    const number = index + 1;
     const dueDate = step.type === "months" ? addMonths(loan.startDate, index + 1) : addDays(loan.startDate, step.value * (index + 1));
-    const paidForInstallment = Math.min(amount, Math.max(remainingPaid, 0));
+    let paidForInstallment = Math.min(amount, Math.max(remainingPaid, 0));
     remainingPaid -= paidForInstallment;
-    const balance = Math.max(amount - paidForInstallment, 0);
-    const status = balance <= 0 ? "paid" : daysBetween(dueDate, today()) > 0 ? "overdue" : "pending";
-    const item = { number: index + 1, dueDate, amount, paid: paidForInstallment, balance, status };
+    let balance = Math.max(amount - paidForInstallment, 0);
+    let status = balance <= 0 ? "paid" : daysBetween(dueDate, today()) > 0 ? "overdue" : "pending";
+
+    const override = overrides[number];
+    let forced = false;
+    if (override === "paid" && status !== "paid") {
+      status = "paid";
+      paidForInstallment = amount;
+      balance = 0;
+      forced = true;
+    } else if (override === "in_process" && status !== "paid") {
+      status = "in_process";
+      forced = true;
+    } else if (override === "pending" && status !== "paid") {
+      status = "pending";
+      forced = true;
+    }
+
+    const item = { number, dueDate, amount, paid: paidForInstallment, balance, status, forced, override: override || null };
     item.lateFee = lateFeeForInstallment(item);
     return item;
   });
@@ -168,12 +186,13 @@ function loanSummary(loan) {
   const lateFees = schedule.reduce((sum, item) => sum + item.lateFee, 0);
   const balance = Math.max(total + lateFees - paid, 0);
   const overdue = schedule.filter(item => item.status === "overdue").length;
-  const status = balance <= 0 ? "closed" : overdue > 0 ? "late" : "active";
+  const computedStatus = balance <= 0 ? "closed" : overdue > 0 ? "late" : "active";
+  const status = loan.statusOverride || computedStatus;
   return {
     total, paid, balance, lateFees,
     interest: total - Number(loan.principal || 0),
     progress: total + lateFees > 0 ? Math.min((paid / (total + lateFees)) * 100, 100) : 0,
-    overdue, status,
+    overdue, status, computedStatus,
     nextDue: schedule.find(item => item.status !== "paid")
   };
 }
@@ -280,7 +299,9 @@ function rowToLoan(row) {
   return {
     id: row.id, clientId: row.client_id, code: row.code, principal: row.principal, rate: row.rate,
     frequency: row.frequency, terms: row.terms, startDate: row.start_date, interestType: row.interest_type,
-    note: row.note, createdAt: row.created_at
+    note: row.note, createdAt: row.created_at,
+    statusOverride: row.status_override || null,
+    installmentOverrides: (row.installment_overrides && typeof row.installment_overrides === "object" && !Array.isArray(row.installment_overrides)) ? row.installment_overrides : {}
   };
 }
 
@@ -751,7 +772,19 @@ function showLoanDetail(id) {
   const client = loan ? getClient(loan.clientId) : null;
   if (!loan || !client) return;
   const summary = loanSummary(loan);
-  const scheduleRows = generateSchedule(loan).map(item => `<tr><td>${item.number}</td><td>${dateLabel(item.dueDate)}</td><td>${money(item.amount)}</td><td>${money(item.paid)}</td><td>${money(item.lateFee)}</td><td>${statusBadge(item.status === "paid" ? "closed" : item.status === "overdue" ? "late" : "active", item.status === "paid" ? "Pagada" : item.status === "overdue" ? "Vencida" : "Pendiente")}</td></tr>`).join("");
+  const admin = isAdmin();
+  const scheduleRows = generateSchedule(loan).map(item => {
+    const label = item.status === "paid" ? "Pagada" : item.status === "in_process" ? "En proceso" : item.status === "overdue" ? "Vencida" : "Pendiente";
+    const badgeStatus = item.status === "paid" ? "closed" : item.status === "in_process" ? "in-process" : item.status === "overdue" ? "late" : "active";
+    const forcedNote = item.forced ? ` <span class="muted" style="font-size:10.5px;">(manual)</span>` : "";
+    const select = admin ? `<select class="compact-select no-print" data-installment-select="${loan.id}:${item.number}">
+        <option value="" ${!item.override ? "selected" : ""}>Automatico</option>
+        <option value="pending" ${item.override === "pending" ? "selected" : ""}>Pendiente</option>
+        <option value="in_process" ${item.override === "in_process" ? "selected" : ""}>En proceso</option>
+        <option value="paid" ${item.override === "paid" ? "selected" : ""}>Pagada</option>
+      </select>` : "";
+    return `<tr><td>${item.number}</td><td>${dateLabel(item.dueDate)}</td><td>${money(item.amount)}</td><td>${money(item.paid)}</td><td>${money(item.lateFee)}</td><td>${statusBadge(badgeStatus, label)}${forcedNote}</td><td class="no-print">${select}</td></tr>`;
+  }).join("");
   const paymentRows = loanPayments(loan.id).map(payment => `<tr><td>${dateLabel(payment.date)}</td><td>${money(payment.amount)}</td><td><button class="ghost-btn compact-btn" type="button" data-payment-receipt="${payment.id}">Recibo</button></td></tr>`).join("");
   document.getElementById("loanDetailTitle").textContent = `${client.name} - ${loan.code}`;
   document.getElementById("loanDetailContent").innerHTML = `
@@ -762,10 +795,48 @@ function showLoanDetail(id) {
       <div class="detail-box"><span>Balance</span><strong>${money(summary.balance)}</strong></div>
     </div>
     <div class="action-row no-print"><button class="success-btn compact-btn" type="button" data-loan-whatsapp="${loan.id}">Enviar WhatsApp</button><button class="ghost-btn compact-btn" type="button" data-loan-edit="${loan.id}">Editar</button></div>
-    <h2>Plan de cuotas</h2><div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>Cuota</th><th>Pagado</th><th>Mora</th><th>Estado</th></tr></thead><tbody>${scheduleRows}</tbody></table></div>
+    ${admin ? `
+    <div class="panel no-print" style="margin-top:14px;padding:14px;">
+      <label class="field-label" for="loanStatusOverride">Estado del prestamo${loan.statusOverride ? ` <span class="muted" style="text-transform:none;font-weight:500;">(forzado manualmente)</span>` : ""}</label>
+      <div class="form-row" style="grid-template-columns:1fr auto;align-items:end;">
+        <select id="loanStatusOverride">
+          <option value="">Automatico (segun balance): ${summary.computedStatus === "closed" ? "Saldado" : summary.computedStatus === "late" ? "Atrasado" : "Activo"}</option>
+          <option value="active" ${loan.statusOverride === "active" ? "selected" : ""}>Forzar: Activo</option>
+          <option value="late" ${loan.statusOverride === "late" ? "selected" : ""}>Forzar: Atrasado</option>
+          <option value="closed" ${loan.statusOverride === "closed" ? "selected" : ""}>Forzar: Saldado (perdon de deuda)</option>
+        </select>
+        <button class="primary-btn compact-btn" type="button" data-loan-status-save="${loan.id}" style="margin-bottom:12px;">Guardar</button>
+      </div>
+    </div>` : ""}
+    <h2>Plan de cuotas</h2><div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>Cuota</th><th>Pagado</th><th>Mora</th><th>Estado</th><th class="no-print"></th></tr></thead><tbody>${scheduleRows}</tbody></table></div>
     <h2 style="margin-top:18px;">Pagos</h2><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Accion</th></tr></thead><tbody>${paymentRows || `<tr><td colspan="3">Sin pagos.</td></tr>`}</tbody></table></div>
     <p class="muted" style="margin-top:14px;">Nota: ${escapeHtml(loan.note || "Sin nota")}</p>`;
   document.getElementById("loanDetailModal").classList.add("open");
+}
+
+async function saveLoanStatusOverride(loanId) {
+  if (!isAdmin()) return;
+  const select = document.getElementById("loanStatusOverride");
+  const value = select.value || null;
+  const { error } = await sb.from("loans").update({ status_override: value }).eq("id", loanId);
+  if (error) { showToast("No se pudo guardar el estado."); return; }
+  await loadEverything();
+  showLoanDetail(loanId);
+  showToast(value ? "Estado forzado guardado." : "Estado vuelto a automatico.");
+}
+
+async function setInstallmentOverride(loanId, installmentNumber, value) {
+  if (!isAdmin()) return;
+  const loan = state.loans.find(item => item.id === loanId);
+  if (!loan) return;
+  const overrides = { ...(loan.installmentOverrides || {}) };
+  if (value) overrides[installmentNumber] = value; else delete overrides[installmentNumber];
+  const { error } = await sb.from("loans").update({ installment_overrides: overrides }).eq("id", loanId);
+  if (error) { showToast("No se pudo actualizar la cuota."); return; }
+  await loadEverything();
+  showLoanDetail(loanId);
+  const labels = { pending: "Pendiente", in_process: "En proceso", paid: "Pagada" };
+  showToast(value ? `Cuota marcada como: ${labels[value]}.` : "Cuota vuelta a automatico.");
 }
 
 function populateDailyCutUserSelect() {
@@ -1151,6 +1222,15 @@ document.addEventListener("click", event => {
   if (target.dataset.paymentReceipt) showReceipt(target.dataset.paymentReceipt);
   if (target.dataset.paymentDelete) deletePayment(target.dataset.paymentDelete);
   if (target.dataset.userDelete) deleteUser(target.dataset.userDelete);
+  if (target.dataset.loanStatusSave) saveLoanStatusOverride(target.dataset.loanStatusSave);
+});
+
+document.addEventListener("change", event => {
+  const target = event.target;
+  if (target.dataset.installmentSelect) {
+    const [loanId, number] = target.dataset.installmentSelect.split(":");
+    setInstallmentOverride(loanId, Number(number), target.value);
+  }
 });
 
 [els.loanSearch, els.loanStatusFilter, els.clientSearch, els.dueFilter, els.dueDateFilter, els.reportFrom, els.reportTo].forEach(control => {
