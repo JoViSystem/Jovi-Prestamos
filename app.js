@@ -453,6 +453,33 @@ function renderDashboard() {
     <div><strong>${escapeHtml(item.clientName)}</strong><span class="muted">${item.loanCode} - cuota ${item.number}</span></div>
     <div><strong>${money(item.balance + item.lateFee)}</strong><span class="${item.status === "overdue" ? "danger-text" : "muted"}">${dateLabel(item.dueDate)}</span></div>
   </div>`).join("") : `<div class="empty">No hay cobros pendientes.</div>`;
+
+  renderDailyCollectionsChart();
+}
+
+function renderDailyCollectionsChart() {
+  const container = document.getElementById("dailyCollectionsChart");
+  const totalLabel = document.getElementById("dailyChartTotal");
+  if (!container) return;
+
+  const days = Array.from({ length: 7 }, (_, index) => addDays(today(), index - 6));
+  const totals = days.map(date => state.payments.filter(payment => payment.date === date).reduce((sum, payment) => sum + Number(payment.amount || 0), 0));
+  const max = Math.max(...totals, 1);
+  const grandTotal = totals.reduce((sum, value) => sum + value, 0);
+
+  if (totalLabel) totalLabel.textContent = `Total: ${money(grandTotal)}`;
+
+  container.innerHTML = days.map((date, index) => {
+    const value = totals[index];
+    const heightPct = Math.max((value / max) * 100, value > 0 ? 6 : 2);
+    const isToday = date === today();
+    const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString("es-DO", { weekday: "short" }).replace(".", "");
+    return `<div class="daily-chart-col">
+      <span class="daily-chart-value">${value > 0 ? money(value) : ""}</span>
+      <div class="daily-chart-bar-wrap"><div class="daily-chart-bar${isToday ? " today" : ""}" style="height:${heightPct}%;"></div></div>
+      <span class="daily-chart-day${isToday ? " today" : ""}">${dayLabel}</span>
+    </div>`;
+  }).join("");
 }
 
 function renderLoans() {
@@ -825,7 +852,39 @@ async function saveLoanStatusOverride(loanId) {
   showToast(value ? "Estado forzado guardado." : "Estado vuelto a automatico.");
 }
 
+async function registerManualInstallmentPayment(loanId, installmentNumber) {
+  if (!isAdmin()) return;
+  const loan = state.loans.find(item => item.id === loanId);
+  if (!loan) return;
+  const item = generateSchedule(loan).find(row => row.number === installmentNumber);
+  if (!item) return;
+  if (item.status === "paid") { showToast("Esa cuota ya esta pagada."); return; }
+  if (!confirm(`Registrar pago de ${money(item.amount)} por la cuota #${installmentNumber} y marcarla pagada?`)) return;
+
+  const paymentData = {
+    loan_id: loanId,
+    company_id: currentUser.companyId,
+    date: today(),
+    amount: item.amount,
+    created_by: currentUser.id
+  };
+  const { data, error } = await sb.from("payments").insert(paymentData).select().single();
+  if (error) { showToast("No se pudo registrar el pago."); return; }
+
+  // Si esta cuota tenia un estado forzado (pendiente/en proceso), lo limpiamos:
+  // ya no hace falta, ahora esta pagada de verdad.
+  const overrides = { ...(loan.installmentOverrides || {}) };
+  delete overrides[installmentNumber];
+  await sb.from("loans").update({ installment_overrides: overrides }).eq("id", loanId);
+
+  await loadEverything();
+  showLoanDetail(loanId);
+  showToast("Pago registrado y cuota marcada como pagada.");
+  showReceipt(data.id);
+}
+
 async function setInstallmentOverride(loanId, installmentNumber, value) {
+  if (value === "paid") { registerManualInstallmentPayment(loanId, installmentNumber); return; }
   if (!isAdmin()) return;
   const loan = state.loans.find(item => item.id === loanId);
   if (!loan) return;
@@ -835,7 +894,7 @@ async function setInstallmentOverride(loanId, installmentNumber, value) {
   if (error) { showToast("No se pudo actualizar la cuota."); return; }
   await loadEverything();
   showLoanDetail(loanId);
-  const labels = { pending: "Pendiente", in_process: "En proceso", paid: "Pagada" };
+  const labels = { pending: "Pendiente", in_process: "En proceso" };
   showToast(value ? `Cuota marcada como: ${labels[value]}.` : "Cuota vuelta a automatico.");
 }
 

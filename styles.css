@@ -822,6 +822,65 @@ tbody tr:hover {
   width: auto;
 }
 
+.daily-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 6px;
+  height: 160px;
+  padding-top: 22px;
+}
+
+.daily-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.daily-chart-value {
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.daily-chart-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.daily-chart-bar {
+  width: 60%;
+  min-width: 10px;
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, var(--primary-dark), var(--line-bright));
+  transition: height 0.3s ease;
+}
+
+.daily-chart-bar.today {
+  background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
+}
+
+.daily-chart-day {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.daily-chart-day.today {
+  color: var(--primary-soft);
+  font-weight: 700;
+}
+
 .stack-list {
   display: grid;
   gap: 10px;
