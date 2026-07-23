@@ -176,6 +176,7 @@
         <input id="paymentDate" type="date">
         <input id="paymentAmount" type="number" min="0" step="0.01" placeholder="Monto pagado">
         <button class="primary-btn" id="registerPaymentBtn" type="button">Registrar pago</button>
+        <button class="ghost-btn" id="dailyCutBtn" type="button">Corte del dia</button>
       </div>
       <section class="panel">
         <div class="panel-head"><h2>Historial de pagos</h2><span id="paymentCount" class="muted"></span></div>
@@ -349,6 +350,23 @@
       <div class="modal-head no-print"><h2 id="receiptTitle">Recibo de pago</h2><button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button></div>
       <div id="receiptContent"></div>
       <button class="primary-btn full no-print" id="printReceiptBtn" type="button">Imprimir recibo</button>
+    </div>
+  </div>
+
+  <div class="modal" id="dailyCutModal" aria-hidden="true">
+    <div class="modal-card receipt-card" role="dialog" aria-modal="true" aria-labelledby="dailyCutTitle">
+      <div class="modal-head no-print">
+        <h2 id="dailyCutTitle">Corte del dia</h2>
+        <button class="icon-btn" data-close-modal type="button" aria-label="Cerrar">x</button>
+      </div>
+      <div class="no-print" style="margin-bottom:14px;">
+        <div class="form-row">
+          <label>Fecha<input id="dailyCutDate" type="date"></label>
+          <label id="dailyCutUserWrap" style="display:none;">Cobrador<select id="dailyCutUser"></select></label>
+        </div>
+      </div>
+      <div id="dailyCutContent"></div>
+      <button class="primary-btn full no-print" id="printDailyCutBtn" type="button">Imprimir corte</button>
     </div>
   </div>
 

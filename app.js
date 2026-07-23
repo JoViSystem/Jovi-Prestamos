@@ -768,6 +768,57 @@ function showLoanDetail(id) {
   document.getElementById("loanDetailModal").classList.add("open");
 }
 
+function populateDailyCutUserSelect() {
+  const select = document.getElementById("dailyCutUser");
+  const wrap = document.getElementById("dailyCutUserWrap");
+  if (!select || !wrap) return;
+  if (!isAdmin()) { wrap.style.display = "none"; return; }
+  wrap.style.display = "";
+  select.innerHTML = state.users.map(user => `<option value="${user.id}">${escapeHtml(user.username)}${user.id === currentUser.id ? " (tu)" : ""}</option>`).join("");
+  select.value = currentUser.id;
+}
+
+function renderDailyCut() {
+  const dateInput = document.getElementById("dailyCutDate");
+  const userSelect = document.getElementById("dailyCutUser");
+  const date = dateInput.value || today();
+  const userId = isAdmin() && userSelect.value ? userSelect.value : currentUser.id;
+  const collector = state.users.find(user => user.id === userId);
+
+  const rows = state.payments
+    .filter(payment => payment.date === date && payment.userId === userId)
+    .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+
+  const total = rows.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+  const lineItems = rows.map(payment => {
+    const loan = state.loans.find(item => item.id === payment.loanId);
+    const client = loan ? getClient(loan.clientId) : null;
+    return `<tr><td>${escapeHtml(client?.name || "Cliente")}</td><td>${escapeHtml(loan?.code || "-")}</td><td>${money(payment.amount)}</td></tr>`;
+  }).join("");
+
+  document.getElementById("dailyCutContent").innerHTML = `<div class="receipt">
+    <h2>${escapeHtml(state.settings.company)}</h2>
+    <p class="muted" style="text-align:center;">Corte del dia</p>
+    <div class="receipt-meta">
+      <span>Fecha: ${dateLabel(date)}</span>
+      <span>Cobrador: ${escapeHtml(collector?.username || currentUser?.username || "usuario")}</span>
+      <span>Pagos cobrados: ${rows.length}</span>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Prestamo</th><th>Monto</th></tr></thead><tbody>${rows.length ? lineItems : `<tr><td colspan="3">Sin cobros en esta fecha.</td></tr>`}</tbody></table></div>
+    <div class="receipt-total">${money(total)}</div>
+    <div class="signature-line">Firma del cobrador</div>
+  </div>`;
+}
+
+function openDailyCut() {
+  const dateInput = document.getElementById("dailyCutDate");
+  if (!dateInput.value) dateInput.value = today();
+  populateDailyCutUserSelect();
+  renderDailyCut();
+  document.getElementById("dailyCutModal").classList.add("open");
+}
+
 function showReceipt(paymentId) {
   const payment = state.payments.find(item => item.id === paymentId);
   const loan = payment ? state.loans.find(item => item.id === payment.loanId) : null;
@@ -1075,6 +1126,11 @@ if (els.resetThemeBtn) {
 }
 document.getElementById("userForm").addEventListener("submit", createUser);
 document.getElementById("printReceiptBtn").addEventListener("click", () => window.print());
+
+document.getElementById("dailyCutBtn").addEventListener("click", openDailyCut);
+document.getElementById("dailyCutDate").addEventListener("change", renderDailyCut);
+document.getElementById("dailyCutUser").addEventListener("change", renderDailyCut);
+document.getElementById("printDailyCutBtn").addEventListener("click", () => window.print());
 document.getElementById("printReportBtn").addEventListener("click", printReport);
 document.getElementById("downloadReportPdfBtn").addEventListener("click", downloadReportPdf);
 document.getElementById("importInput").addEventListener("change", event => {
