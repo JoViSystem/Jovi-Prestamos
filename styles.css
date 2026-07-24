@@ -36,6 +36,80 @@
   --font-body: "Inter", "Segoe UI", sans-serif;
 }
 
+/* ---------------------------------------------------------------------
+   Tema claro — se activa poniendo data-theme="light" en <html>
+   --------------------------------------------------------------------- */
+
+[data-theme="light"] {
+  --bg: #f2f5fa;
+  --bg-elevated: #ffffff;
+  --panel: #ffffff;
+  --panel-soft: #f8fafc;
+  --panel-hover: #eef2f8;
+  --line: #dfe6f0;
+  --line-bright: #c7d2e2;
+  --text: #101828;
+  --muted: #5b6b82;
+  --muted-soft: #8b98ab;
+
+  --glow-cyan: 0 0 0 1px rgba(14, 147, 172, 0.3), 0 0 20px rgba(14, 147, 172, 0.12);
+  --shadow: 0 12px 28px rgba(30, 41, 59, 0.10);
+  --shadow-lift: 0 20px 45px rgba(30, 41, 59, 0.16);
+}
+
+[data-theme="light"] body {
+  background:
+    radial-gradient(1100px 560px at 12% -8%, rgba(34, 211, 238, 0.09), transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, rgba(59, 130, 246, 0.06), transparent 55%),
+    var(--bg);
+}
+
+[data-theme="light"] html {
+  color-scheme: light;
+}
+
+[data-theme="light"] .login-screen {
+  background: radial-gradient(700px 420px at 50% 0%, rgba(34, 211, 238, 0.12), transparent 60%), #eef2f8;
+}
+
+[data-theme="light"] .login-screen::before {
+  background-image:
+    linear-gradient(rgba(14, 147, 172, 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 147, 172, 0.10) 1px, transparent 1px);
+}
+
+[data-theme="light"] .sidebar {
+  background: rgba(255, 255, 255, 0.97);
+}
+
+[data-theme="light"] .sidebar-overlay {
+  background: rgba(15, 23, 42, 0.32);
+}
+
+[data-theme="light"] .modal {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+[data-theme="light"] .modal-card {
+  box-shadow: 0 -20px 50px rgba(30, 41, 59, 0.18);
+}
+
+[data-theme="light"] .theme-toggle svg .sun {
+  display: block;
+}
+
+[data-theme="light"] .theme-toggle svg .moon {
+  display: none;
+}
+
+.theme-toggle svg .sun {
+  display: none;
+}
+
+.theme-toggle svg .moon {
+  display: block;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -170,7 +244,7 @@ body.locked .app {
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  color: #fff;
+  color: var(--text);
 }
 
 .brand span {
@@ -436,7 +510,7 @@ h1 {
   margin-bottom: 0;
   font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text);
   letter-spacing: 0.2px;
 }
 
@@ -444,7 +518,7 @@ h2 {
   font-size: 16px;
   font-weight: 700;
   margin-bottom: 14px;
-  color: #fff;
+  color: var(--text);
 }
 
 /* ---------------------------------------------------------------------
@@ -515,6 +589,9 @@ h2 {
   color: var(--muted);
   border: 1px solid var(--line);
   font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon-btn:hover {
@@ -605,7 +682,7 @@ h2 {
   margin-top: 8px;
   font-size: 21px;
   font-family: var(--font-display);
-  color: #fff;
+  color: var(--text);
 }
 
 .metric-card.danger::before {
@@ -723,7 +800,7 @@ tbody tr:hover {
   margin: 0;
   font-size: 16px;
   font-family: var(--font-display);
-  color: #fff;
+  color: var(--text);
 }
 
 .loan-code,

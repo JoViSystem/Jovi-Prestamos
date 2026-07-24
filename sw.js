@@ -1,10 +1,13 @@
-const CACHE_NAME = "jovi-prestamos-pro-v6";
+const CACHE_NAME = "jovi-prestamos-pro-v8";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./install.js",
+  "./demo.js",
+  "./theme.js",
+  "./reset-password.html",
   "./config.js",
   "./manifest.json",
   "./logo.png",
