@@ -772,6 +772,78 @@ tbody tr:hover {
 }
 
 /* ---------------------------------------------------------------------
+   Tablas -> tarjetas apiladas en celular (nada de scroll horizontal)
+   --------------------------------------------------------------------- */
+
+@media (max-width: 639px) {
+  .responsive-cards.table-wrap-marker {
+    /* clase auxiliar, no se usa directamente */
+  }
+
+  table.responsive-cards {
+    min-width: 0;
+    border: 0;
+  }
+
+  table.responsive-cards thead {
+    display: none;
+  }
+
+  table.responsive-cards,
+  table.responsive-cards tbody {
+    display: block;
+    width: 100%;
+  }
+
+  table.responsive-cards tr {
+    display: block;
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+  }
+
+  table.responsive-cards tr:last-child {
+    margin-bottom: 0;
+  }
+
+  table.responsive-cards td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border: 0;
+    text-align: right;
+  }
+
+  table.responsive-cards td:not(:last-child) {
+    border-bottom: 1px dashed var(--line);
+  }
+
+  table.responsive-cards td::before {
+    content: attr(data-label);
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  table.responsive-cards td[data-label=""]::before,
+  table.responsive-cards td:not([data-label])::before {
+    content: none;
+  }
+
+  table.responsive-cards td:not([data-label]) {
+    justify-content: flex-start;
+  }
+}
+
+/* ---------------------------------------------------------------------
    Tarjetas de prestamo / vencimiento
    --------------------------------------------------------------------- */
 

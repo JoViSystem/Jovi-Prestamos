@@ -147,7 +147,7 @@
             <button class="link-btn" data-view-shortcut="loans" type="button">Ver todos</button>
           </div>
           <div class="table-wrap">
-            <table>
+            <table class="responsive-cards">
               <thead><tr><th>Cliente</th><th>Monto</th><th>Balance</th><th>Estado</th></tr></thead>
               <tbody id="recentLoansTable"></tbody>
             </table>
@@ -192,7 +192,7 @@
         <button class="primary-btn" data-open-modal="clientModal" type="button">Nuevo cliente</button>
       </div>
       <div class="table-wrap panel-table">
-        <table>
+        <table class="responsive-cards">
           <thead><tr><th>Nombre</th><th>Documento</th><th>Telefono</th><th>Prestamos</th><th>Accion</th></tr></thead>
           <tbody id="clientsTable"></tbody>
         </table>
@@ -210,7 +210,7 @@
       <section class="panel">
         <div class="panel-head"><h2>Historial de pagos</h2><span id="paymentCount" class="muted"></span></div>
         <div class="table-wrap">
-          <table>
+          <table class="responsive-cards">
             <thead><tr><th>Fecha</th><th>Cliente</th><th>Prestamo</th><th>Monto</th><th>Accion</th></tr></thead>
             <tbody id="paymentsTable"></tbody>
           </table>
@@ -247,7 +247,7 @@
       <section class="panel">
         <div class="panel-head"><h2>Resumen por prestamo</h2><span class="muted">Filtrado por fecha</span></div>
         <div class="table-wrap">
-          <table>
+          <table class="responsive-cards">
             <thead><tr><th>Cliente</th><th>Codigo</th><th>Prestado</th><th>Pagado</th><th>Balance</th><th>Estado</th></tr></thead>
             <tbody id="reportsTable"></tbody>
           </table>
@@ -314,7 +314,7 @@
         <section class="panel">
           <h2>Usuarios</h2>
           <div class="table-wrap">
-            <table class="compact-table">
+            <table class="compact-table responsive-cards">
               <thead><tr><th>Usuario</th><th>Rol</th><th>Accion</th></tr></thead>
               <tbody id="usersTable"></tbody>
             </table>
@@ -333,7 +333,7 @@
         <section class="panel">
           <div class="panel-head"><h2>Auditoria</h2><span class="muted">Ultimas 50 acciones</span></div>
           <div class="table-wrap">
-            <table class="compact-table">
+            <table class="compact-table responsive-cards">
               <thead><tr><th>Fecha</th><th>Usuario</th><th>Accion</th><th>Detalle</th></tr></thead>
               <tbody id="auditLogTable"><tr><td colspan="4">Cargando...</td></tr></tbody>
             </table>

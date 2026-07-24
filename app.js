@@ -447,7 +447,7 @@ function renderDashboard() {
   els.recentLoansTable.innerHTML = recent.length ? recent.map(loan => {
     const client = getClient(loan.clientId);
     const summary = loanSummary(loan);
-    return `<tr><td>${escapeHtml(client?.name || "Sin cliente")}</td><td>${money(loan.principal)}</td><td>${money(summary.balance)}</td><td>${statusBadge(summary.status)}</td></tr>`;
+    return `<tr><td data-label="Cliente">${escapeHtml(client?.name || "Sin cliente")}</td><td data-label="Monto">${money(loan.principal)}</td><td data-label="Balance">${money(summary.balance)}</td><td data-label="Estado">${statusBadge(summary.status)}</td></tr>`;
   }).join("") : `<tr><td colspan="4">No hay prestamos registrados.</td></tr>`;
 
   const upcoming = getAllDueItems().filter(item => item.status !== "paid").sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5);
@@ -522,10 +522,10 @@ function renderClients() {
   els.clientsTable.innerHTML = clients.length ? clients.map(client => {
     const count = state.loans.filter(loan => loan.clientId === client.id).length;
     return `<tr>
-      <td><strong>${escapeHtml(client.name)}</strong><br><span class="muted">${escapeHtml(client.address || "")}</span></td>
-      <td>${escapeHtml(client.document || "-")}</td>
-      <td>${escapeHtml(client.phone || "-")}</td>
-      <td>${count}</td>
+      <td data-label="Nombre"><strong>${escapeHtml(client.name)}</strong><br><span class="muted">${escapeHtml(client.address || "")}</span></td>
+      <td data-label="Documento">${escapeHtml(client.document || "-")}</td>
+      <td data-label="Telefono">${escapeHtml(client.phone || "-")}</td>
+      <td data-label="Prestamos">${count}</td>
       <td>
         <div class="action-row">
           <button class="ghost-btn compact-btn" type="button" data-client-loan="${client.id}">Prestar</button>
@@ -552,7 +552,7 @@ function renderPayments() {
     const loan = state.loans.find(item => item.id === payment.loanId);
     const client = loan ? getClient(loan.clientId) : null;
     return `<tr>
-      <td>${dateLabel(payment.date)}</td><td>${escapeHtml(client?.name || "Cliente eliminado")}</td><td>${escapeHtml(loan?.code || "-")}</td><td><strong>${money(payment.amount)}</strong></td>
+      <td data-label="Fecha">${dateLabel(payment.date)}</td><td data-label="Cliente">${escapeHtml(client?.name || "Cliente eliminado")}</td><td data-label="Prestamo">${escapeHtml(loan?.code || "-")}</td><td data-label="Monto"><strong>${money(payment.amount)}</strong></td>
       <td><button class="ghost-btn compact-btn" type="button" data-payment-receipt="${payment.id}">Recibo</button>${isAdmin() ? ` <button class="danger-btn compact-btn" type="button" data-payment-delete="${payment.id}">Eliminar</button>` : ""}</td>
     </tr>`;
   }).join("") : `<tr><td colspan="5">Todavia no hay pagos registrados.</td></tr>`;
@@ -619,13 +619,13 @@ function renderReports() {
   els.reportLateClients.textContent = data.lateClients;
 
   els.reportsTable.innerHTML = data.rows.length ? data.rows.map(row =>
-    `<tr><td>${escapeHtml(row.client)}</td><td>${escapeHtml(row.code)}</td><td>${money(row.principal)}</td><td>${money(row.paid)}</td><td>${money(row.balance)}</td><td>${statusBadge(row.status)}</td></tr>`
+    `<tr><td data-label="Cliente">${escapeHtml(row.client)}</td><td data-label="Codigo">${escapeHtml(row.code)}</td><td data-label="Prestado">${money(row.principal)}</td><td data-label="Pagado">${money(row.paid)}</td><td data-label="Balance">${money(row.balance)}</td><td data-label="Estado">${statusBadge(row.status)}</td></tr>`
   ).join("") : `<tr><td colspan="6">No hay prestamos para reportar.</td></tr>`;
 }
 
 function renderUsers() {
   els.usersTable.innerHTML = state.users.map(user => `<tr>
-    <td>${escapeHtml(user.username)}</td><td>${user.role === "admin" ? "Administrador" : user.role === "owner" ? "Dueño" : "Cobrador"}</td>
+    <td data-label="Usuario">${escapeHtml(user.username)}</td><td data-label="Rol">${user.role === "admin" ? "Administrador" : user.role === "owner" ? "Dueño" : "Cobrador"}</td>
     <td>${user.id === currentUser.id ? `<span class="muted">Tu cuenta</span>` : `<button class="danger-btn compact-btn" type="button" data-user-delete="${user.id}">Eliminar</button>`}</td>
   </tr>`).join("");
 }
@@ -702,10 +702,10 @@ async function loadAuditLog() {
   const { data, error } = await sb.from("audit_log").select("*").order("created_at", { ascending: false }).limit(50);
   if (error) { table.innerHTML = `<tr><td colspan="4">No se pudo cargar.</td></tr>`; return; }
   table.innerHTML = (data && data.length) ? data.map(entry => `<tr>
-      <td>${new Date(entry.created_at).toLocaleString("es-DO")}</td>
-      <td>${escapeHtml(entry.actor_name || "usuario")}</td>
-      <td>${escapeHtml(entry.action)}${entry.target_label ? `: ${escapeHtml(entry.target_label)}` : ""}</td>
-      <td class="muted">${escapeHtml(entry.details || "")}</td>
+      <td data-label="Fecha">${new Date(entry.created_at).toLocaleString("es-DO")}</td>
+      <td data-label="Usuario">${escapeHtml(entry.actor_name || "usuario")}</td>
+      <td data-label="Accion">${escapeHtml(entry.action)}${entry.target_label ? `: ${escapeHtml(entry.target_label)}` : ""}</td>
+      <td data-label="Detalle" class="muted">${escapeHtml(entry.details || "")}</td>
     </tr>`).join("") : `<tr><td colspan="4">Sin actividad registrada todavia.</td></tr>`;
 }
 
@@ -879,9 +879,9 @@ function showLoanDetail(id) {
         <option value="in_process" ${item.override === "in_process" ? "selected" : ""}>En proceso</option>
         <option value="paid" ${item.override === "paid" ? "selected" : ""}>Pagada</option>
       </select>` : "";
-    return `<tr><td>${item.number}</td><td>${dateLabel(item.dueDate)}</td><td>${money(item.amount)}</td><td>${money(item.paid)}</td><td>${money(item.lateFee)}</td><td>${statusBadge(badgeStatus, label)}${forcedNote}</td><td class="no-print">${select}</td></tr>`;
+    return `<tr><td data-label="#">${item.number}</td><td data-label="Fecha">${dateLabel(item.dueDate)}</td><td data-label="Cuota">${money(item.amount)}</td><td data-label="Pagado">${money(item.paid)}</td><td data-label="Mora">${money(item.lateFee)}</td><td data-label="Estado">${statusBadge(badgeStatus, label)}${forcedNote}</td><td class="no-print">${select}</td></tr>`;
   }).join("");
-  const paymentRows = loanPayments(loan.id).map(payment => `<tr><td>${dateLabel(payment.date)}</td><td>${money(payment.amount)}</td><td><button class="ghost-btn compact-btn" type="button" data-payment-receipt="${payment.id}">Recibo</button></td></tr>`).join("");
+  const paymentRows = loanPayments(loan.id).map(payment => `<tr><td data-label="Fecha">${dateLabel(payment.date)}</td><td data-label="Monto">${money(payment.amount)}</td><td><button class="ghost-btn compact-btn" type="button" data-payment-receipt="${payment.id}">Recibo</button></td></tr>`).join("");
   const refinancedInto = state.loans.find(item => item.refinancedFrom === loan.id);
   const refinanceNote = loan.refinancedFrom
     ? `<p class="muted" style="margin-top:6px;">Este prestamo nace de un refinanciamiento.</p>`
@@ -915,8 +915,8 @@ function showLoanDetail(id) {
         <button class="primary-btn compact-btn" type="button" data-loan-status-save="${loan.id}" style="margin-bottom:12px;">Guardar</button>
       </div>
     </div>` : ""}
-    <h2>Plan de cuotas</h2><div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>Cuota</th><th>Pagado</th><th>Mora</th><th>Estado</th><th class="no-print"></th></tr></thead><tbody>${scheduleRows}</tbody></table></div>
-    <h2 style="margin-top:18px;">Pagos</h2><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Accion</th></tr></thead><tbody>${paymentRows || `<tr><td colspan="3">Sin pagos.</td></tr>`}</tbody></table></div>
+    <h2>Plan de cuotas</h2><div class="table-wrap"><table class="responsive-cards"><thead><tr><th>#</th><th>Fecha</th><th>Cuota</th><th>Pagado</th><th>Mora</th><th>Estado</th><th class="no-print"></th></tr></thead><tbody>${scheduleRows}</tbody></table></div>
+    <h2 style="margin-top:18px;">Pagos</h2><div class="table-wrap"><table class="responsive-cards"><thead><tr><th>Fecha</th><th>Monto</th><th>Accion</th></tr></thead><tbody>${paymentRows || `<tr><td colspan="3">Sin pagos.</td></tr>`}</tbody></table></div>
     <p class="muted" style="margin-top:14px;">Nota: ${escapeHtml(loan.note || "Sin nota")}</p>`;
   document.getElementById("loanDetailModal").classList.add("open");
 }
